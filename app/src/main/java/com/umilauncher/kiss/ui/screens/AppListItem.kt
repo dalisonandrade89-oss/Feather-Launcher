@@ -1,6 +1,7 @@
 package com.umilauncher.kiss.ui.screens
 
 import android.graphics.Bitmap
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -31,7 +32,16 @@ import com.umilauncher.kiss.data.IconCache
  * (Card no M3 adiciona elevação/sombra -> shadow layer extra na GPU).
  * O ícone só é decodificado quando o item entra em composição, e reaproveita
  * o bitmap do cache se já existir (comum ao alternar drawer <-> favoritos).
+ *
+ * @OptIn(ExperimentalFoundationApi::class): usado por causa do
+ * combinedClickable, que continua marcado como experimental no Compose
+ * Foundation mesmo depois de anos estável em produção (é o próprio Google
+ * quem usa em apps como o Play Store). Não existe substituto estável para
+ * "toque curto + toque longo no mesmo elemento" sem reimplementar a
+ * detecção de gestos manualmente com pointerInput/detectTapGestures, o que
+ * traria mais risco de regressão do que aceitar essa API experimental.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppListItem(
     app: AppInfo,
