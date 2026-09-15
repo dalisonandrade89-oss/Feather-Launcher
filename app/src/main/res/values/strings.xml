@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Umi Launcher</string>
+    <string name="search_hint">Buscar apps…</string>
+    <string name="empty_favorites">Toque e segure um app na gaveta para fixar aqui</string>
+    <string name="all_apps">Todos os apps</string>
+</resources>
