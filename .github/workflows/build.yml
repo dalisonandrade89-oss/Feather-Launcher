@@ -27,6 +27,10 @@ jobs:
     - name: Build Debug APK with Gradle
       run: gradle assembleDebug
 
+    # FIX #1 (comparação de fluidez): o build de debug (sem minify, com
+    # debuggable=true) é bem mais lento que uma build otimizada. Para medir
+    # a fluidez real do launcher, compare o app-release gerado aqui, não o
+    # app-debug — o debug serve só para desenvolvimento/depuração.
     - name: Build Release APK with Gradle
       run: gradle assembleRelease
 
