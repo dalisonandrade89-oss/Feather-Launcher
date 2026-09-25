@@ -63,6 +63,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.feather.launcher.widget.WidgetPrefs
 import com.feather.launcher.widget.WidgetPlacement
 import com.feather.launcher.widget.WidgetProviderOption
+import kotlinx.collections.immutable.PersistentList
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -83,7 +84,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 @Composable
 fun WidgetsPanelScreen(
-    placements: List<WidgetPlacement>,
+    placements: PersistentList<WidgetPlacement>,
     createHostView: (Int) -> AppWidgetHostView?,
     onRemoveWidget: (Int) -> Unit,
     onResizeWidget: (Int, Int, Int) -> Unit,
@@ -154,7 +155,7 @@ private fun packIntoRows(placements: List<WidgetPlacement>, columns: Int): List<
 
 @Composable
 private fun WidgetsGrid(
-    placements: List<WidgetPlacement>,
+    placements: PersistentList<WidgetPlacement>,
     createHostView: (Int) -> AppWidgetHostView?,
     onRemoveWidget: (Int) -> Unit,
     onResizeWidget: (Int, Int, Int) -> Unit,

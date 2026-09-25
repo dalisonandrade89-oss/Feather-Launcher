@@ -1,5 +1,10 @@
 package com.feather.launcher.ui.screens
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.text.format.DateFormat
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -38,7 +43,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,14 +52,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.feather.launcher.data.AppInfo
 import com.feather.launcher.data.SpaceDef
 import com.feather.launcher.data.ThemeMode
 import com.feather.launcher.notification.LastNotificationInfo
 import com.feather.launcher.ui.components.ColorPickerDialog
-import kotlinx.coroutines.delay
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.PersistentSet
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -62,18 +73,18 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    spaces: List<SpaceDef>,
+    spaces: PersistentList<SpaceDef>,
     currentSpaceId: String,
     onSpaceSelected: (String) -> Unit,
     onAddSpace: (String) -> Unit,
     onRenameSpace: (String, String) -> Unit,
     onDeleteSpace: (String) -> Unit,
-    spaceApps: List<AppInfo>,
+    spaceApps: PersistentList<AppInfo>,
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
     accentColor: Color?,
     onAccentColorChange: (Color?) -> Unit,
-    appsWithNotifications: Set<String>,
+    appsWithNotifications: PersistentSet<String>,
     lastNotification: LastNotificationInfo?,
     onNotificationClick: (LastNotificationInfo) -> Unit,
     notificationAccessGranted: Boolean,
@@ -290,7 +301,7 @@ private fun TextInputDialog(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SpaceTabsRow(
-    spaces: List<SpaceDef>,
+    spaces: PersistentList<SpaceDef>,
     currentSpaceId: String,
     onSpaceSelected: (String) -> Unit,
     onAddClick: () -> Unit,
@@ -360,20 +371,82 @@ private fun EmptySpaceHint() {
 /**
  * Relógio atualizado por minuto (não por segundo) para minimizar
  * recomposições e uso de CPU.
+ *
+ * FIX #9 + P8 (auditoria): antes disso, um loop com `delay()` calculava
+ * "segundos até o próximo minuto" e dormia até lá. Dois problemas:
+ * - `delay()` conta tempo de execução (uptimeMillis), que NÃO avança
+ *   durante o sono profundo do aparelho — ao acordar a tela, o relógio
+ *   podia mostrar um horário até 1 minuto atrasado, até o loop
+ *   "descobrir" que passou do tempo.
+ * - o loop continuava rodando (acordando a cada minuto) mesmo com o
+ *   launcher em segundo plano, sem necessidade.
+ *
+ * Agora ouvimos os broadcasts do próprio sistema (`ACTION_TIME_TICK`,
+ * disparado exatamente a cada minuto de verdade, imune a sono
+ * profundo — mais `ACTION_TIME_CHANGED`/`ACTION_TIMEZONE_CHANGED` para
+ * cobrir o usuário ajustando o relógio manualmente), e só registramos
+ * o receiver enquanto a Activity está em primeiro plano
+ * (ON_START/ON_STOP), via o ciclo de vida do Compose.
+ *
+ * Também respeitamos a preferência de 12h/24h do sistema em vez de
+ * fixar "HH:mm".
  */
 @Composable
 private fun TopClockPanel() {
+    val context = LocalContext.current
     var now by remember { mutableStateOf(Calendar.getInstance()) }
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            now = Calendar.getInstance()
-            val secondsToNextMinute = 60 - now.get(Calendar.SECOND)
-            delay(secondsToNextMinute * 1000L)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(receivedContext: Context?, intent: Intent?) {
+                now = Calendar.getInstance()
+            }
+        }
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_TIME_TICK)
+            addAction(Intent.ACTION_TIME_CHANGED)
+            addAction(Intent.ACTION_TIMEZONE_CHANGED)
+        }
+
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> {
+                    // Atualiza na hora ao voltar pro primeiro plano — não
+                    // espera o próximo ACTION_TIME_TICK do sistema.
+                    now = Calendar.getInstance()
+                    ContextCompat.registerReceiver(
+                        context,
+                        receiver,
+                        filter,
+                        ContextCompat.RECEIVER_NOT_EXPORTED
+                    )
+                }
+                Lifecycle.Event.ON_STOP -> {
+                    try {
+                        context.unregisterReceiver(receiver)
+                    } catch (_: IllegalArgumentException) {
+                        // Já estava desregistrado — sem problema.
+                    }
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (_: IllegalArgumentException) {
+            }
         }
     }
 
-    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val is24Hour = remember { DateFormat.is24HourFormat(context) }
+    val timeFormat = remember(is24Hour) {
+        SimpleDateFormat(if (is24Hour) "HH:mm" else "h:mm a", Locale.getDefault())
+    }
     val dateFormat = remember { SimpleDateFormat("EEEE, d 'de' MMMM", Locale.getDefault()) }
 
     Column(

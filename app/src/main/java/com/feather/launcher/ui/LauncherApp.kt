@@ -32,6 +32,9 @@ import com.feather.launcher.ui.screens.HomeScreen
 import com.feather.launcher.ui.screens.WidgetsPanelScreen
 import com.feather.launcher.widget.WidgetPlacement
 import com.feather.launcher.widget.WidgetProviderOption
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.PersistentSet
 import kotlinx.coroutines.launch
 
 private const val PAGE_WIDGETS = 0
@@ -46,32 +49,32 @@ private const val PAGE_COUNT = 3
  */
 @Composable
 fun LauncherApp(
-    filteredApps: List<AppInfo>,
+    filteredApps: PersistentList<AppInfo>,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     drawerViewMode: AppDrawerViewMode,
     onToggleDrawerViewMode: () -> Unit,
-    spaces: List<SpaceDef>,
+    spaces: PersistentList<SpaceDef>,
     currentSpaceId: String,
     onSpaceSelected: (String) -> Unit,
     onAddSpace: (String) -> Unit,
     onRenameSpace: (String, String) -> Unit,
     onDeleteSpace: (String) -> Unit,
-    currentSpaceApps: List<AppInfo>,
-    assignments: Map<String, Set<String>>,
+    currentSpaceApps: PersistentList<AppInfo>,
+    assignments: PersistentMap<String, PersistentSet<String>>,
     onToggleAppInSpace: (String, AppInfo) -> Unit,
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
     accentColor: Color?,
     onAccentColorChange: (Color?) -> Unit,
-    appsWithNotifications: Set<String>,
+    appsWithNotifications: PersistentSet<String>,
     lastNotification: LastNotificationInfo?,
     onNotificationClick: (LastNotificationInfo) -> Unit,
     notificationAccessGranted: Boolean,
     onRequestNotificationAccess: () -> Unit,
     onAppClick: (AppInfo) -> Unit,
     onRemoveAppFromCurrentSpace: (AppInfo) -> Unit,
-    widgetPlacements: List<WidgetPlacement>,
+    widgetPlacements: PersistentList<WidgetPlacement>,
     createWidgetHostView: (Int) -> AppWidgetHostView?,
     onRemoveWidget: (Int) -> Unit,
     onResizeWidget: (Int, Int, Int) -> Unit,

@@ -10,6 +10,51 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.6.1] - 2026-09-25
+
+Continuação da auditoria: P2 (recomposição excessiva) e P8 (itens
+menores de performance/limpeza).
+
+### Corrigido
+- **Recomposição excessiva (P2):** sem Kotlin 2.0 (que traz "strong
+  skipping" por padrão), o compilador do Compose trata qualquer
+  `List`/`Map`/`Set` puro do Kotlin como instável — qualquer composable
+  que recebe esses tipos como parâmetro nunca pula recomposição, mesmo
+  que o conteúdo não tenha mudado. Cada notificação postada recompunha
+  Home, Gaveta e Widgets inteiras. Convertidos os StateFlow expostos
+  pelo ViewModel (`filteredApps`, `spaces`, `currentSpaceApps`,
+  `assignments`, `appsWithNotifications`, `widgetPlacements`) e as
+  assinaturas dos composables que os recebem para
+  `PersistentList`/`PersistentSet`/`PersistentMap`
+  (`kotlinx.collections.immutable`) — reconhecidos como estáveis pelo
+  compilador mesmo sem strong skipping, e mantendo os operadores
+  `+`/`-`/`put` que o código já usava. Optamos por essa rota em vez de
+  migrar o projeto inteiro para Kotlin 2.0, mais arriscado sem
+  conseguir compilar localmente para validar.
+- `collectAsState()` trocado por `collectAsStateWithLifecycle()` em
+  todas as coletas de `StateFlow` no `MainActivity` — a coleta (e a
+  recomposição que ela pode disparar) agora pausa sozinha quando a
+  Activity não está em primeiro plano. A dependência já estava no
+  projeto (`lifecycle-runtime-compose`), só não era usada.
+- **Relógio (#9, ainda pendente da auditoria original + P8):** o loop
+  de `delay()` foi trocado por um `BroadcastReceiver` ouvindo
+  `ACTION_TIME_TICK`/`ACTION_TIME_CHANGED`/`ACTION_TIMEZONE_CHANGED`,
+  registrado só enquanto a Activity está em primeiro plano
+  (ON_START/ON_STOP). Corrige o atraso de até 1 minuto que podia
+  acontecer ao acordar a tela (`delay()` usa tempo de execução, que não
+  avança durante o sono profundo) e o loop rodando à toa em segundo
+  plano. Também passou a respeitar a preferência de 12h/24h do sistema
+  em vez de fixar "HH:mm".
+- (P8) `getSpaces()` era chamado duas vezes no construtor do
+  `LauncherViewModel`, lendo e fazendo parsing das prefs em dobro à toa.
+- (P8) Removida a regra `-keep class com.feather.launcher.data.** { *; }`
+  do ProGuard — não há reflexão usando essas classes em lugar nenhum do
+  projeto, então ela só impedia o R8 de otimizar esse pacote sem
+  nenhum ganho real.
+
+### Adicionado
+- Dependência `org.jetbrains.kotlinx:kotlinx-collections-immutable`.
+
 ## [1.6.0] - 2026-09-19
 
 Continuação da rodada de correções da auditoria: segurança da

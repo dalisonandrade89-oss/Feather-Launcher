@@ -14,8 +14,8 @@ plugins {
 // (BuildConfig.VERSION_NAME) usam estas mesmas variáveis, então nunca
 // ficam dessincronizados.
 // ---------------------------------------------------------------------
-val appVersionCode = 11
-val appVersionName = "1.6.0"
+val appVersionCode = 12
+val appVersionName = "1.6.1"
 
 android {
     namespace = "com.feather.launcher"
@@ -153,6 +153,18 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
+
+    // FIX #26 (P2 da auditoria): sem Kotlin 2.0 (que traz "strong
+    // skipping" por padrão), o compilador do Compose trata qualquer
+    // List/Map/Set puro do Kotlin como "instável" (podem ser mutáveis
+    // por baixo), então telas que recebem esses tipos como parâmetro
+    // NUNCA pulam recomposição — cada notificação recompunha Home,
+    // Gaveta e Widgets, mesmo as duas últimas não tendo nada relevante
+    // mudado. kotlinx.collections.immutable é reconhecido como estável
+    // pelo compilador do Compose mesmo sem strong skipping — mais
+    // seguro que trocar a versão do Kotlin do projeto inteiro sem
+    // conseguir compilar pra validar.
+    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.7")
     implementation("androidx.activity:activity-compose:1.9.1")
 
     // Compose - somente APIs estáveis (Material3 + Foundation)

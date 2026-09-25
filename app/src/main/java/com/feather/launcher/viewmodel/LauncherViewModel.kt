@@ -19,6 +19,14 @@ import com.feather.launcher.notification.LastNotificationInfo
 import com.feather.launcher.notification.NotificationRepository
 import com.feather.launcher.widget.WidgetPlacement
 import com.feather.launcher.widget.WidgetPrefs
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.PersistentSet
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toPersistentList
+import kotlinx.collections.immutable.toPersistentMap
+import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -26,9 +34,24 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/**
+ * FIX #26 (P2 da auditoria): os StateFlow expostos aqui para a UI usam
+ * `PersistentList`/`PersistentSet`/`PersistentMap`
+ * (kotlinx.collections.immutable) em vez de `List`/`Set`/`Map` puros do
+ * Kotlin. Sem Kotlin 2.0 (que traz "strong skipping" por padrão), o
+ * compilador do Compose trata qualquer List/Map/Set como "instável"
+ * (podem ser mutáveis por baixo), então qualquer composable que recebe
+ * esses tipos como parâmetro NUNCA pula recomposição — cada notificação
+ * postada recompunha Home, Gaveta e Widgets inteiras, mesmo as duas
+ * últimas não tendo nada de fato relevante mudado. Os tipos
+ * `Persistent*` são reconhecidos como estáveis pelo compilador do
+ * Compose mesmo sem strong skipping, e ainda suportam os operadores
+ * `+`/`-`/`put` que o código já usava — troca de tipo, não de lógica.
+ */
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
 
     private val appRepository = AppRepository(application)
@@ -48,10 +71,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    val filteredApps: StateFlow<List<AppInfo>> =
+    val filteredApps: StateFlow<PersistentList<AppInfo>> =
         combine(_allApps, _searchQuery) { apps, query ->
             val trimmed = query.trim()
-            if (trimmed.isBlank()) {
+            val filtered = if (trimmed.isBlank()) {
                 apps
             } else {
                 val normalizedQuery = trimmed.toSearchNormalized()
@@ -60,7 +83,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                         app.packageName.lowercase().contains(normalizedQuery)
                 }
             }
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+            filtered.toPersistentList()
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, persistentListOf())
 
     fun onSearchQueryChange(newQuery: String) {
         _searchQuery.value = newQuery
@@ -82,10 +106,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     // ---------- Spaces (abas contextuais dinâmicas) ----------
 
-    private val _spaces = MutableStateFlow(appPrefs.getSpaces())
-    val spaces: StateFlow<List<SpaceDef>> = _spaces
+    // FIX #23 (P8 da auditoria): getSpaces() lê e faz parsing das prefs
+    // — chamar duas vezes para a mesma leitura é trabalho em dobro à toa
+    // no construtor do ViewModel (roda na Main thread).
+    private val initialSpaces = appPrefs.getSpaces().toPersistentList()
 
-    private val _currentSpaceId = MutableStateFlow(appPrefs.getSpaces().firstOrNull()?.id.orEmpty())
+    private val _spaces = MutableStateFlow(initialSpaces)
+    val spaces: StateFlow<PersistentList<SpaceDef>> = _spaces
+
+    private val _currentSpaceId = MutableStateFlow(initialSpaces.firstOrNull()?.id.orEmpty())
     val currentSpaceId: StateFlow<String> = _currentSpaceId
 
     fun onSpaceSelected(spaceId: String) {
@@ -93,16 +122,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun addSpace(name: String) {
-        _spaces.value = appPrefs.addSpace(name)
+        _spaces.value = appPrefs.addSpace(name).toPersistentList()
     }
 
     fun renameSpace(spaceId: String, newName: String) {
-        _spaces.value = appPrefs.renameSpace(spaceId, newName)
+        _spaces.value = appPrefs.renameSpace(spaceId, newName).toPersistentList()
     }
 
     fun deleteSpace(spaceId: String) {
-        _spaces.value = appPrefs.deleteSpace(spaceId)
-        _assignments.value = _assignments.value - spaceId
+        _spaces.value = appPrefs.deleteSpace(spaceId).toPersistentList()
+        _assignments.value = _assignments.value.remove(spaceId)
         if (_currentSpaceId.value == spaceId) {
             _currentSpaceId.value = _spaces.value.firstOrNull()?.id.orEmpty()
         }
@@ -111,23 +140,25 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     // ---------- Vínculo de apps por Space (regra de exclusividade) ----------
 
     private val _assignments = MutableStateFlow(
-        appPrefs.getAllAssignments(_spaces.value.map { it.id })
+        appPrefs.getAllAssignments(initialSpaces.map { it.id })
+            .mapValues { (_, pkgs) -> pkgs.toPersistentSet() }
+            .toPersistentMap()
     )
-    val assignments: StateFlow<Map<String, Set<String>>> = _assignments
+    val assignments: StateFlow<PersistentMap<String, PersistentSet<String>>> = _assignments
 
     /** Apps visíveis no Space atualmente selecionado (só os explicitamente vinculados a ele). */
-    val currentSpaceApps: StateFlow<List<AppInfo>> =
+    val currentSpaceApps: StateFlow<PersistentList<AppInfo>> =
         combine(_allApps, _currentSpaceId, _assignments) { apps, spaceId, assignmentsMap ->
             val pkgs = assignmentsMap[spaceId].orEmpty()
-            apps.filter { it.packageName in pkgs }
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+            apps.filter { it.packageName in pkgs }.toPersistentList()
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, persistentListOf())
 
     /** Vincula/desvincula [app] ao Space [spaceId] — chamado pelo menu de contexto na Gaveta. */
     fun toggleAppInSpace(spaceId: String, app: AppInfo) {
         appPrefs.toggleAppInSpace(spaceId, app.packageName)
-        val current = _assignments.value[spaceId].orEmpty()
+        val current: Set<String> = _assignments.value[spaceId].orEmpty()
         val updated = if (app.packageName in current) current - app.packageName else current + app.packageName
-        _assignments.value = _assignments.value + (spaceId to updated)
+        _assignments.value = _assignments.value.put(spaceId, updated.toPersistentSet())
     }
 
     /** Remove [app] apenas do Space atual — atalho de toque longo na própria Home. */
@@ -137,22 +168,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     // ---------- Widgets (tela da esquerda) ----------
 
-    private val _widgetPlacements = MutableStateFlow<List<WidgetPlacement>>(emptyList())
-    val widgetPlacements: StateFlow<List<WidgetPlacement>> = _widgetPlacements
+    private val _widgetPlacements = MutableStateFlow<PersistentList<WidgetPlacement>>(persistentListOf())
+    val widgetPlacements: StateFlow<PersistentList<WidgetPlacement>> = _widgetPlacements
 
     fun onWidgetAdded(appWidgetId: Int, spanX: Int, spanY: Int) {
         widgetPrefs.addPlacement(appWidgetId, spanX, spanY)
-        _widgetPlacements.value = widgetPrefs.getPlacements()
+        _widgetPlacements.value = widgetPrefs.getPlacements().toPersistentList()
     }
 
     fun onWidgetRemoved(appWidgetId: Int) {
         widgetPrefs.removePlacement(appWidgetId)
-        _widgetPlacements.value = widgetPrefs.getPlacements()
+        _widgetPlacements.value = widgetPrefs.getPlacements().toPersistentList()
     }
 
     fun onWidgetResized(appWidgetId: Int, spanX: Int, spanY: Int) {
         widgetPrefs.updateSpan(appWidgetId, spanX, spanY)
-        _widgetPlacements.value = widgetPrefs.getPlacements()
+        _widgetPlacements.value = widgetPrefs.getPlacements().toPersistentList()
     }
 
     // ---------- Aparência ----------
@@ -179,7 +210,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val lastNotification: StateFlow<LastNotificationInfo?> = NotificationRepository.lastNotification
 
     /** Pacotes com notificação ativa no momento — alimenta o ponto nos ícones da Home. */
-    val appsWithNotifications: StateFlow<Set<String>> = NotificationRepository.activeNotificationPackages
+    val appsWithNotifications: StateFlow<PersistentSet<String>> =
+        NotificationRepository.activeNotificationPackages
+            .map { it.toPersistentSet() }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, persistentSetOf())
 
     fun dismissLastNotification(key: String) {
         com.feather.launcher.notification.FeatherNotificationListenerService.dismiss(key)
@@ -213,7 +247,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     init {
-        _widgetPlacements.value = widgetPrefs.getPlacements()
+        _widgetPlacements.value = widgetPrefs.getPlacements().toPersistentList()
         loadApps()
         try {
             launcherApps?.registerCallback(launcherAppsCallback)
@@ -242,6 +276,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val installedPackageNames = apps.map { it.packageName }.toSet()
             appPrefs.pruneAssignments(installedPackageNames)
             _assignments.value = appPrefs.getAllAssignments(_spaces.value.map { it.id })
+                .mapValues { (_, pkgs) -> pkgs.toPersistentSet() }
+                .toPersistentMap()
 
             _isLoadingApps.value = false
         }

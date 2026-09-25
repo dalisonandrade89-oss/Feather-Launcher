@@ -50,6 +50,9 @@ import com.feather.launcher.R
 import com.feather.launcher.data.AppDrawerViewMode
 import com.feather.launcher.data.AppInfo
 import com.feather.launcher.data.SpaceDef
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.PersistentSet
 
 /**
  * Gaveta de apps: campo de busca fixo (fora da lista, então nunca rola
@@ -69,13 +72,13 @@ import com.feather.launcher.data.SpaceDef
  */
 @Composable
 fun AppDrawerScreen(
-    apps: List<AppInfo>,
+    apps: PersistentList<AppInfo>,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     viewMode: AppDrawerViewMode,
     onToggleViewMode: () -> Unit,
-    spaces: List<SpaceDef>,
-    assignments: Map<String, Set<String>>,
+    spaces: PersistentList<SpaceDef>,
+    assignments: PersistentMap<String, PersistentSet<String>>,
     onToggleAppInSpace: (String, AppInfo) -> Unit,
     onAppClick: (AppInfo) -> Unit,
     modifier: Modifier = Modifier
@@ -135,7 +138,7 @@ fun AppDrawerScreen(
 
 @Composable
 private fun AppListView(
-    apps: List<AppInfo>,
+    apps: PersistentList<AppInfo>,
     onAppClick: (AppInfo) -> Unit,
     onAppLongClick: (AppInfo) -> Unit
 ) {
@@ -161,7 +164,7 @@ private fun AppListView(
 
 @Composable
 private fun AppGridView(
-    apps: List<AppInfo>,
+    apps: PersistentList<AppInfo>,
     onAppClick: (AppInfo) -> Unit,
     onAppLongClick: (AppInfo) -> Unit
 ) {
@@ -234,8 +237,8 @@ private fun AppGridTile(app: AppInfo, onClick: () -> Unit, onLongClick: () -> Un
 @Composable
 private fun SpaceAssignmentDialog(
     app: AppInfo,
-    spaces: List<SpaceDef>,
-    assignments: Map<String, Set<String>>,
+    spaces: PersistentList<SpaceDef>,
+    assignments: PersistentMap<String, PersistentSet<String>>,
     onToggle: (String) -> Unit,
     onDismiss: () -> Unit
 ) {

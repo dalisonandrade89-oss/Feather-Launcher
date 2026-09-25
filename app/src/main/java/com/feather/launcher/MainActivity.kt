@@ -17,12 +17,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feather.launcher.data.AppInfo
 import com.feather.launcher.ui.LauncherApp
 import com.feather.launcher.ui.theme.FeatherTheme
@@ -79,21 +79,29 @@ class MainActivity : ComponentActivity() {
         notificationAccessGranted = isNotificationAccessGranted()
 
         setContent {
-            val themeMode by viewModel.themeMode.collectAsState()
-            val accentColor by viewModel.accentColor.collectAsState()
+            // FIX #25 (P2 da auditoria): collectAsStateWithLifecycle em vez
+            // de collectAsState — a coleta (e a recomposição que ela pode
+            // disparar) pausa sozinha quando a Activity não está em
+            // STARTED (ex.: launcher em segundo plano, outro app na
+            // frente), em vez de continuar reagindo a cada emissão dos
+            // StateFlow mesmo sem nada visível na tela. A dependência
+            // (androidx.lifecycle:lifecycle-runtime-compose) já estava no
+            // projeto, só não era usada em lugar nenhum.
+            val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+            val accentColor by viewModel.accentColor.collectAsStateWithLifecycle()
 
             FeatherTheme(themeMode = themeMode, accentColor = accentColor) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    val filteredApps by viewModel.filteredApps.collectAsState()
-                    val searchQuery by viewModel.searchQuery.collectAsState()
-                    val drawerViewMode by viewModel.drawerViewMode.collectAsState()
-                    val spaces by viewModel.spaces.collectAsState()
-                    val currentSpaceId by viewModel.currentSpaceId.collectAsState()
-                    val currentSpaceApps by viewModel.currentSpaceApps.collectAsState()
-                    val assignments by viewModel.assignments.collectAsState()
-                    val lastNotification by viewModel.lastNotification.collectAsState()
-                    val appsWithNotifications by viewModel.appsWithNotifications.collectAsState()
-                    val widgetPlacements by viewModel.widgetPlacements.collectAsState()
+                    val filteredApps by viewModel.filteredApps.collectAsStateWithLifecycle()
+                    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+                    val drawerViewMode by viewModel.drawerViewMode.collectAsStateWithLifecycle()
+                    val spaces by viewModel.spaces.collectAsStateWithLifecycle()
+                    val currentSpaceId by viewModel.currentSpaceId.collectAsStateWithLifecycle()
+                    val currentSpaceApps by viewModel.currentSpaceApps.collectAsStateWithLifecycle()
+                    val assignments by viewModel.assignments.collectAsStateWithLifecycle()
+                    val lastNotification by viewModel.lastNotification.collectAsStateWithLifecycle()
+                    val appsWithNotifications by viewModel.appsWithNotifications.collectAsStateWithLifecycle()
+                    val widgetPlacements by viewModel.widgetPlacements.collectAsStateWithLifecycle()
 
                     LauncherApp(
                         filteredApps = filteredApps,
