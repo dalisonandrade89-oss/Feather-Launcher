@@ -10,6 +10,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # FIX #22: "secrets" não pode ser usado direto dentro de uma condição
+    # "if:" de um step — é uma restrição da própria plataforma do GitHub
+    # Actions (dá erro "Unrecognized named-value: 'secrets'" ao validar o
+    # workflow), não algo que dependa de como o secret foi escrito. O jeito
+    # certo é guardar o resultado da comparação numa variável de ambiente
+    # no nível do JOB (isso sim pode usar "secrets"), e aí sim usar essa
+    # variável (via contexto "env") dentro do "if:" de um step.
+    env:
+      HAS_RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
+
     steps:
     - uses: actions/checkout@v4
 
@@ -41,7 +51,7 @@ jobs:
     # debug automaticamente — o build não quebra, só não fica assinado
     # com a chave de release de verdade.
     - name: Decode release keystore (se configurado)
-      if: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
+      if: ${{ env.HAS_RELEASE_KEYSTORE == 'true' }}
       env:
         RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
       run: |
@@ -49,7 +59,7 @@ jobs:
 
     - name: Build Release APK with Gradle
       env:
-        RELEASE_STORE_FILE: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' && format('{0}/release.keystore', runner.temp) || '' }}
+        RELEASE_STORE_FILE: ${{ env.HAS_RELEASE_KEYSTORE == 'true' && format('{0}/release.keystore', runner.temp) || '' }}
         RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
         RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
         RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
