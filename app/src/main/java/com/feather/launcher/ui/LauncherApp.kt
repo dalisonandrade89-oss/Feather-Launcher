@@ -81,10 +81,19 @@ fun LauncherApp(
     val pagerState = rememberPagerState(initialPage = PAGE_HOME) { PAGE_COUNT }
     val coroutineScope = rememberCoroutineScope()
 
-    // FIX #6 (histórico): "voltar" some retorna para a Home em vez de
-    // arriscar fechar a Activity, em qualquer página que não seja a Home.
-    BackHandler(enabled = pagerState.currentPage != PAGE_HOME) {
-        coroutineScope.launch { pagerState.animateScrollToPage(PAGE_HOME) }
+    // FIX #18: o BackHandler ficava DESLIGADO (enabled = false) na Home,
+    // deixando o botão "voltar" para o comportamento padrão do sistema —
+    // que, numa Activity HOME/launchMode singleTask, é encerrar a
+    // Activity. O Android então a recria na hora (é a launcher padrão,
+    // precisa reaparecer), o que na prática o usuário vê como um
+    // "pisca": a tela reconstrói a grade de apps do zero. Agora o
+    // BackHandler fica sempre ativo; na Home ele simplesmente não faz
+    // nada, consumindo o evento em vez de deixá-lo derrubar a Activity.
+    BackHandler(enabled = true) {
+        if (pagerState.currentPage != PAGE_HOME) {
+            coroutineScope.launch { pagerState.animateScrollToPage(PAGE_HOME) }
+        }
+        // Na Home: de propósito, não faz nada.
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -92,7 +101,19 @@ fun LauncherApp(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
             key = { page -> page },
-            beyondViewportPageCount = 0
+            // FIX #19 (P1): com beyondViewportPageCount = 0, a página de
+            // Widgets era DESCARTADA inteira sempre que você não estava
+            // nela — cada volta recriava todos os AppWidgetHostView do
+            // zero (reinflando os RemoteViews), exatamente o custo que a
+            // troca do LazyVerticalGrid por grade manual já tinha tentado
+            // evitar (só que aquela correção resolveu a recriação AO
+            // ROLAR dentro do painel, não a recriação ao TROCAR de
+            // página). Com 3 páginas fixas, manter Widgets e Home sempre
+            // compostas (1 página além da visível) cobre o caminho mais
+            // comum de uso (Home ↔ Widgets) sem manter a Gaveta (a
+            // página mais pesada, com a lista completa de apps) presa em
+            // memória o tempo todo sem necessidade.
+            beyondViewportPageCount = 1
         ) { page ->
             when (page) {
                 PAGE_WIDGETS -> WidgetsPanelScreen(

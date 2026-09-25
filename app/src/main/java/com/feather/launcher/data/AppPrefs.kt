@@ -139,6 +139,26 @@ class AppPrefs(context: Context) {
         prefs.edit().putString(assignmentKey(spaceId), current.joinToString(",")).apply()
     }
 
+    /**
+     * Remove dos vínculos por Space qualquer pacote que não esteja em
+     * [installedPackageNames] — chamado depois de recarregar a lista de
+     * apps (ver LauncherViewModel), para não acumular indefinidamente
+     * referências a apps desinstalados nas prefs.
+     */
+    fun pruneAssignments(installedPackageNames: Set<String>) {
+        val editor = prefs.edit()
+        var changed = false
+        for (space in getSpaces()) {
+            val current = getAssignedPackages(space.id)
+            val pruned = current.intersect(installedPackageNames)
+            if (pruned.size != current.size) {
+                editor.putString(assignmentKey(space.id), pruned.joinToString(","))
+                changed = true
+            }
+        }
+        if (changed) editor.apply()
+    }
+
     private fun assignmentKey(spaceId: String) = KEY_SPACE_APPS_PREFIX + spaceId
 
     companion object {

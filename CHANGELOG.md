@@ -10,6 +10,88 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.5.0] - 2026-09-19
+
+Correções a partir de uma auditoria completa do código (gerada por um
+agente auditor separado, verificada manualmente contra o código real
+antes de aplicar qualquer coisa). Cobre os 4 problemas de maior
+prioridade apontados: um crash provável, widgets trocando de lugar, a
+lista de apps nunca atualizando, e o jank mais perceptível da lista.
+Inclui também a correção do "voltar fecha o launcher", confirmada em
+uso real.
+
+### Adicionado
+- A lista de apps agora se atualiza sozinha ao instalar, desinstalar ou
+  atualizar um app, via `LauncherApps.Callback` (com um pequeno
+  debounce, já que uma atualização de app costuma disparar mais de um
+  evento em sequência). Até aqui, a lista só recarregava reiniciando o
+  processo do launcher inteiro.
+- Vínculos de apps por Space para pacotes desinstalados são limpos
+  automaticamente a cada atualização da lista, em vez de acumular
+  indefinidamente nas prefs.
+
+### Corrigido
+- **Crash por chave duplicada na Gaveta:** `AppListView` e `AppGridView`
+  usavam `packageName` como key; um pacote com mais de uma activity
+  LAUNCHER (comum em algumas ROMs e em apps do Google/Samsung) gerava
+  duas entradas com a mesma key, e o Compose lança
+  `IllegalArgumentException`. Trocado para `app.key`
+  (`packageName + activityName`), que já era usado corretamente na Home.
+- **Widgets trocando de lugar ao remover/redimensionar:** a grade
+  manual de widgets (`WidgetsGrid`) não envolvia cada item em `key()`.
+  Sem isso, o Compose identifica cada `WidgetCard` pela posição na
+  árvore, não pelo widget que ele representa — ao remover o widget A,
+  o slot dele passava a receber os dados do widget B, mas o
+  `AndroidView` (cuja `factory` só roda uma vez por slot) continuava
+  mostrando a view de A. Resultado: os botões de ação podiam agir no
+  widget errado.
+- **"Voltar" fechando o launcher na Home:** o `BackHandler` ficava
+  desligado na Home, deixando o botão "voltar" cair no comportamento
+  padrão do sistema — que, numa Activity HOME com `launchMode
+  singleTask`, encerra a Activity, e o Android a recria na hora (por
+  ser a launcher padrão). Na prática: a tela pisca e a grade de apps é
+  reconstruída do zero. Confirmado em uso real. Agora o `BackHandler`
+  fica sempre ativo; na Home, simplesmente não faz nada.
+- **Painel de Widgets recriado a cada visita:** com
+  `beyondViewportPageCount = 0` no `HorizontalPager`, a página de
+  Widgets era descartada por inteiro sempre que não estava visível —
+  cada volta reinflava todos os `AppWidgetHostView` do zero. Esse é o
+  mesmo tipo de problema que uma correção anterior (grade não-lazy, ver
+  v1.4.0) já tinha resolvido, só que dentro do painel; faltava resolver
+  também na troca de página. Agora Widgets e Home ficam sempre
+  compostas (a Gaveta, mais pesada, continua sendo descartada quando
+  não está visível — é a página com a lista completa de apps, e menos
+  visitada a partir de Widgets diretamente).
+
+## [1.4.4] - 2026-09-18
+
+**Reversão** das duas mudanças da v1.4.3, que pioraram o app em teste
+real: o widget da agenda continuou estático (nenhum ganho) e o botão
+de "Alterar tamanho"/"Remover" parou de funcionar por completo
+(regressão clara). Como nenhuma das duas trouxe benefício confirmado,
+optamos por voltar ao comportamento da v1.4.2, que era conhecido e
+funcionava.
+
+### Revertido
+- `detectLongPress` voltou a usar `waitForUpOrCancellation()` puro
+  (sem a checagem manual de deslocamento do dedo adicionada na
+  v1.4.3), que é o que fazia o toque-e-segure funcionar. A checagem de
+  deslocamento tinha um bug não identificado que impedia o long-press
+  de disparar.
+- Removida a `NestedScrollInteropConnection` do painel de Widgets — não
+  fez a lista da agenda do Google Calendar rolar, então ficou só como
+  risco sem benefício.
+
+### Conhecido
+- O diálogo de ações do widget ainda pode abrir, ocasionalmente, se um
+  swipe entre as abas Widgets ↔ Home começar bem dentro do cantinho de
+  40dp (v1.4.2) — não resolvido nesta versão; qualquer tentativa de
+  correção precisa ser testada com cuidado antes de substituir o que já
+  funciona.
+- Listas nativas dentro de widgets (ex.: agenda do Google Calendar)
+  continuam sem rolar dentro do painel de Widgets — sem solução
+  identificada até o momento.
+
 ## [1.4.3] - 2026-09-18
 
 Segunda camada de proteção para o mesmo problema do diálogo de ações

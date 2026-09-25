@@ -1,6 +1,8 @@
 package com.feather.launcher.viewmodel
 
 import android.app.Application
+import android.content.pm.LauncherApps
+import android.os.UserHandle
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,6 +20,8 @@ import com.feather.launcher.notification.NotificationRepository
 import com.feather.launcher.widget.WidgetPlacement
 import com.feather.launcher.widget.WidgetPrefs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -181,9 +185,50 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         com.feather.launcher.notification.FeatherNotificationListenerService.dismiss(key)
     }
 
+    // ---------- Atualização automática da lista (instalar/desinstalar/atualizar) ----------
+
+    private val launcherApps: LauncherApps? =
+        application.getSystemService(LauncherApps::class.java)
+
+    private var reloadJob: Job? = null
+
+    /** Reagenda o reload com um pequeno debounce — instalar um app costuma disparar
+     *  mais de um callback em sequência (removed+added numa atualização, por exemplo). */
+    private fun scheduleReload() {
+        reloadJob?.cancel()
+        reloadJob = viewModelScope.launch {
+            delay(300)
+            loadApps()
+        }
+    }
+
+    private val launcherAppsCallback = object : LauncherApps.Callback() {
+        override fun onPackageAdded(packageName: String, user: UserHandle) = scheduleReload()
+        override fun onPackageRemoved(packageName: String, user: UserHandle) = scheduleReload()
+        override fun onPackageChanged(packageName: String, user: UserHandle) = scheduleReload()
+        override fun onPackagesAvailable(packageNames: Array<String>, user: UserHandle, replacing: Boolean) =
+            scheduleReload()
+        override fun onPackagesUnavailable(packageNames: Array<String>, user: UserHandle, replacing: Boolean) =
+            scheduleReload()
+    }
+
     init {
         _widgetPlacements.value = widgetPrefs.getPlacements()
         loadApps()
+        try {
+            launcherApps?.registerCallback(launcherAppsCallback)
+        } catch (_: Exception) {
+            // Sem essa permissão o launcher não funcionaria mesmo; se
+            // falhar aqui, a lista só deixa de se atualizar sozinha.
+        }
+    }
+
+    override fun onCleared() {
+        try {
+            launcherApps?.unregisterCallback(launcherAppsCallback)
+        } catch (_: Exception) {
+        }
+        super.onCleared()
     }
 
     private fun loadApps() {
@@ -191,6 +236,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             _isLoadingApps.value = true
             val apps = appRepository.loadInstalledApps()
             _allApps.value = apps
+
+            // Limpa vínculos de Spaces para apps que não existem mais,
+            // para não acumular lixo nas prefs indefinidamente.
+            val installedPackageNames = apps.map { it.packageName }.toSet()
+            appPrefs.pruneAssignments(installedPackageNames)
+            _assignments.value = appPrefs.getAllAssignments(_spaces.value.map { it.id })
+
             _isLoadingApps.value = false
         }
     }

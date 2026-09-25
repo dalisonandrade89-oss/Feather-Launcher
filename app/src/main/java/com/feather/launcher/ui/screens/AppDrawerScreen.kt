@@ -144,7 +144,7 @@ private fun AppListView(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 96.dp)
     ) {
-        items(items = apps, key = { app -> app.packageName }) { app ->
+        items(items = apps, key = { app -> app.key }) { app ->
             AppRow(
                 app = app,
                 onClick = { onAppClick(app) },
@@ -172,7 +172,7 @@ private fun AppGridView(
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.Center
     ) {
-        items(items = apps, key = { app -> app.packageName }) { app ->
+        items(items = apps, key = { app -> app.key }) { app ->
             AppGridTile(
                 app = app,
                 onClick = { onAppClick(app) },

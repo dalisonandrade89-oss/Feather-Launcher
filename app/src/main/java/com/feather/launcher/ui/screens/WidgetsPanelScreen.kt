@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -46,6 +47,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -54,8 +56,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.BitmapPainter
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -65,8 +65,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.feather.launcher.widget.WidgetPrefs
 import com.feather.launcher.widget.WidgetPlacement
 import com.feather.launcher.widget.WidgetProviderOption
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Painel de widgets: grade redimensionável (FIX #1). Cada widget ocupa
@@ -166,18 +165,16 @@ private fun WidgetsGrid(
     val spacing = 8.dp
     val rows = remember(placements) { packIntoRows(placements, WidgetPrefs.GRID_COLUMNS) }
 
-    // FIX #15: NestedScrollInteropConnection — sem isso, este
-    // verticalScroll() do Compose "ganha" qualquer arrasto vertical
-    // antes que uma lista nativa DENTRO de um widget (ex.: a agenda do
-    // Google Calendar, que usa uma ListView clássica) consiga rolar
-    // sozinha. Views antigas como ListView coordenam rolagem aninhada
-    // pelo mecanismo antigo de "interceptar toque", que o sistema de
-    // gestos do Compose não participa por padrão — esta conexão é a
-    // ponte oficial do próprio Compose para esse cenário.
+    // FIX #15 (revertido na v1.4.4): NestedScrollInteropConnection foi
+    // adicionada aqui para tentar deixar listas nativas dentro de
+    // widgets (ex.: a agenda do Google Calendar) rolarem sozinhas.
+    // Testado em aparelho real: não resolveu o scroll da agenda E ainda
+    // corria o risco de interferir no toque-e-segure da faixa de ações
+    // (ver detectLongPress). Sem benefício confirmado e com risco real,
+    // foi removida — ver CHANGELOG v1.4.4.
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .nestedScroll(rememberNestedScrollInteropConnection())
             .verticalScroll(rememberScrollState())
             .padding(contentPadding)
     ) {
@@ -188,14 +185,27 @@ private fun WidgetsGrid(
             rows.forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(spacing)) {
                     row.forEach { placement ->
-                        val itemWidth = cellWidth * placement.spanX + spacing * (placement.spanX - 1)
-                        Box(modifier = Modifier.width(itemWidth)) {
-                            WidgetCard(
-                                placement = placement,
-                                createHostView = createHostView,
-                                onRemove = { onRemoveWidget(placement.appWidgetId) },
-                                onResize = { spanX, spanY -> onResizeWidget(placement.appWidgetId, spanX, spanY) }
-                            )
+                        // FIX #17: sem key() aqui, o Compose identifica cada
+                        // WidgetCard pela POSIÇÃO na árvore, não pelo widget
+                        // que ele representa (isso só existe automaticamente
+                        // em listas lazy com key). Ao remover o widget A, o
+                        // slot dele passava a receber o placement de B, mas
+                        // o AndroidView (cuja factory só roda uma vez por
+                        // slot) continuava mostrando a view de A — resultado:
+                        // o botão de remover/redimensionar acabava agindo no
+                        // widget errado. key(placement.appWidgetId) resolve
+                        // isso, fazendo o Compose descartar e recriar o nó
+                        // certo quando a lista muda.
+                        key(placement.appWidgetId) {
+                            val itemWidth = cellWidth * placement.spanX + spacing * (placement.spanX - 1)
+                            Box(modifier = Modifier.width(itemWidth)) {
+                                WidgetCard(
+                                    placement = placement,
+                                    createHostView = createHostView,
+                                    onRemove = { onRemoveWidget(placement.appWidgetId) },
+                                    onResize = { spanX, spanY -> onResizeWidget(placement.appWidgetId, spanX, spanY) }
+                                )
+                            }
                         }
                     }
                 }
@@ -324,11 +334,13 @@ private fun WidgetCard(
  * começasse ali, o HorizontalPager e o detector de toque longo
  * disputavam o mesmo gesto, às vezes abrindo o diálogo no meio da
  * transição. Restringir a área a um cantinho fixo reduz drasticamente
- * a chance de o gesto de arrastar começar bem ali. O detector de toque
- * longo em si também ganhou uma segunda camada de proteção para esse
- * mesmo caso (cancela se o dedo se mover) — ver FIX #16 em
- * [detectLongPress], para os casos raros em que o arrasto ainda assim
- * começa dentro do cantinho.
+ * a chance de o gesto de arrastar começar bem ali — ainda pode
+ * acontecer se o arrasto começar bem dentro do cantinho, mas é um alvo
+ * bem menor. Uma tentativa de fechar esse último caso residual
+ * (cancelar o long-press por deslocamento do dedo, ver FIX #16 em
+ * [detectLongPress]) quebrou o toque-e-segure por completo em teste
+ * real e foi revertida na v1.4.4 — o cantinho pequeno sozinho é a
+ * proteção que temos por enquanto.
  */
 @Composable
 private fun WidgetHandle(onLongPress: () -> Unit) {
@@ -358,53 +370,29 @@ private fun WidgetHandle(onLongPress: () -> Unit) {
 }
 
 /**
- * Toque e segure com duração customizável e cancelamento por
- * deslocamento (touch slop).
+ * Toque e segure com duração customizável.
  *
- * FIX #16: a versão anterior só parava de esperar quando o dedo
- * soltava ou o tempo estourava — nunca verificava se o dedo tinha SE
- * MOVIDO. Isso permitia que iniciar o swipe entre páginas bem em cima
- * da faixa (ex.: saindo de Widgets para a Home) contasse como um toque
- * parado, disparando o diálogo no meio da transição. O próprio
- * `detectTapGestures` do Compose já cancela o long-press assim que o
- * toque ultrapassa `viewConfiguration.touchSlop` — replicamos esse
- * mesmo cuidado aqui, já que precisávamos de uma duração customizada
- * (ver [WIDGET_HANDLE_LONG_PRESS_MS]) e não dava pra usar o padrão
- * pronto do Compose.
+ * FIX #16 (revertido na v1.4.4): tentei adicionar aqui um
+ * cancelamento manual por deslocamento do dedo (checando
+ * `touchSlop`), para o diálogo parar de abrir se o swipe entre
+ * páginas começasse bem em cima da faixa. Essa versão, testada em
+ * aparelho real, quebrou o toque-e-segure por completo (o diálogo
+ * simplesmente parou de abrir). Como o cantinho de 40dp (FIX #14) já
+ * reduz bastante a chance de o swipe começar exatamente ali, voltamos
+ * para esta versão mais simples — que é a mesma lógica interna do
+ * `waitForUpOrCancellation` que o próprio `detectTapGestures` do
+ * Compose usa, só que com duração customizável (ver
+ * [WIDGET_HANDLE_LONG_PRESS_MS]).
  */
 private suspend fun PointerInputScope.detectLongPress(durationMs: Long, onLongPress: () -> Unit) {
     awaitEachGesture {
-        val down = awaitFirstDown(requireUnconsumed = false)
-        var longPressTriggered = false
-        try {
-            withTimeout(durationMs) {
-                while (true) {
-                    val event = awaitPointerEvent()
-                    val change = event.changes.firstOrNull { it.id == down.id } ?: return@withTimeout
-                    if (!change.pressed) {
-                        // Soltou antes do tempo: toque comum, nada a fazer.
-                        return@withTimeout
-                    }
-                    val movedDistance = (change.position - down.position).getDistance()
-                    if (movedDistance > viewConfiguration.touchSlop) {
-                        // Moveu o suficiente para ser um arrasto (o swipe
-                        // entre páginas, por exemplo) — cancela o long-press.
-                        return@withTimeout
-                    }
-                }
-            }
-        } catch (_: TimeoutCancellationException) {
-            longPressTriggered = true
-        }
-
-        if (longPressTriggered) {
+        awaitFirstDown()
+        val longPressConfirmed = withTimeoutOrNull(durationMs) {
+            waitForUpOrCancellation()
+        } == null
+        if (longPressConfirmed) {
             onLongPress()
-            // Consome o resto do gesto para o eventual "up" não virar
-            // nenhuma outra ação depois que o diálogo já abriu.
-            do {
-                val event = awaitPointerEvent()
-                event.changes.forEach { it.consume() }
-            } while (event.changes.any { it.pressed })
+            waitForUpOrCancellation()
         }
     }
 }
