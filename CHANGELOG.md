@@ -10,6 +10,43 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.6.0] - 2026-09-19
+
+Continuação da rodada de correções da auditoria: segurança da
+assinatura de release (#6) e lambdas travadas/acessibilidade (#10).
+
+### Adicionado
+- Assinatura de release configurável via variáveis de ambiente
+  (`RELEASE_STORE_FILE`/`RELEASE_STORE_PASSWORD`/`RELEASE_KEY_ALIAS`/
+  `RELEASE_KEY_PASSWORD`), lidas pelo CI a partir de GitHub Secrets. Ver
+  `RELEASING.md` para o passo a passo de configuração. Sem os secrets
+  configurados, o release continua caindo de volta pra chave de debug
+  (build não quebra, só não fica assinado com a chave de verdade).
+
+### Corrigido
+- **Segurança (#6):** o release era assinado com a mesma chave de
+  debug, versionada no repositório com senha pública. Num repositório
+  público com CI publicando o release automaticamente, isso permitia
+  que qualquer pessoa assinasse um APK malicioso com a mesma
+  assinatura e o Android aceitasse como "atualização" — grave,
+  considerando que o app pede Acesso a Notificações. Gerada uma chave
+  de release de verdade (fora do repositório, entregue separadamente).
+- **Lambdas "congeladas" (#10):** `pointerInput(key) { detectTapGestures(...) }`
+  só reinicia sua coroutine quando a `key` muda. Em `SpaceTabsRow`, a
+  key era `space.id` (não muda ao renomear) — renomear uma aba e tocar
+  segurar nela de novo abria o diálogo com o nome ANTIGO pré-preenchido.
+  O mesmo padrão existia (com impacto menor) em `AppTile`, `AppRow` e
+  `AppGridTile`. Trocado por `Modifier.combinedClickable`, que lê
+  `onClick`/`onLongClick` sempre atualizados a cada recomposição.
+- **Acessibilidade (#10):** `detectTapGestures` não gera nenhuma
+  semântica de clique — o TalkBack não conseguia abrir nenhum app por
+  esta launcher. `combinedClickable` expõe a ação corretamente para
+  leitores de tela, nos mesmos pontos acima e no seletor de widgets
+  (`WidgetProviderRow`, agora com `clickable` simples).
+- (P6, de brinde) `BitmapPainter(...)` recriado a cada recomposição
+  trocado por `Image(bitmap = ...)` nos mesmos pontos; removido um
+  `.background(Color.Transparent)` sem efeito em `AppTile`.
+
 ## [1.5.0] - 2026-09-19
 
 Correções a partir de uma auditoria completa do código (gerada por um

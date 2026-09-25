@@ -1,8 +1,9 @@
 package com.feather.launcher.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,8 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.painter.BitmapPainter
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -186,23 +185,31 @@ private fun AppGridView(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AppGridTile(app: AppInfo, onClick: () -> Unit, onLongClick: () -> Unit) {
     Column(
         modifier = Modifier
             .padding(vertical = 8.dp)
             .size(width = 76.dp, height = 92.dp)
-            .pointerInput(app.key) {
-                detectTapGestures(
-                    onTap = { onClick() },
-                    onLongPress = { onLongClick() }
-                )
-            },
+            // FIX #21 (item #10 da auditoria): combinedClickable troca o
+            // pointerInput(app.key) + detectTapGestures cru por duas
+            // razões: (1) o pointerInput só reinicia sua coroutine quando
+            // a KEY muda — como app.key não muda entre recomposições,
+            // qualquer estado capturado ficava "congelado" na primeira
+            // composição; combinedClickable lê onClick/onLongClick
+            // sempre atualizados, a cada recomposição, sem precisar de
+            // key nenhuma. (2) detectTapGestures não gera nenhuma
+            // semântica de acessibilidade — o TalkBack não conseguia
+            // nem "ver" que isto era clicável, muito menos abrir o app.
+            // combinedClickable expõe a ação de clique/toque longo
+            // corretamente para leitores de tela.
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (app.icon != null) {
             Image(
-                painter = BitmapPainter(app.icon),
+                bitmap = app.icon,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp)
             )
@@ -333,23 +340,19 @@ private fun VersionFooter() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AppRow(app: AppInfo, onClick: () -> Unit, onLongClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .pointerInput(app.key) {
-                detectTapGestures(
-                    onTap = { onClick() },
-                    onLongPress = { onLongClick() }
-                )
-            }
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (app.icon != null) {
             Image(
-                painter = BitmapPainter(app.icon),
+                bitmap = app.icon,
                 contentDescription = null,
                 modifier = Modifier.size(36.dp)
             )

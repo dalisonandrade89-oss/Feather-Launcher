@@ -1,9 +1,10 @@
 package com.feather.launcher.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,8 +47,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.BitmapPainter
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.feather.launcher.data.AppInfo
@@ -288,6 +287,7 @@ private fun TextInputDialog(
 
 // ---------- Linha de abas (Spaces) ----------
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SpaceTabsRow(
     spaces: List<SpaceDef>,
@@ -316,12 +316,17 @@ private fun SpaceTabsRow(
                         if (isSelected) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.surfaceVariant
                     )
-                    .pointerInput(space.id) {
-                        detectTapGestures(
-                            onTap = { onSpaceSelected(space.id) },
-                            onLongPress = { onSpaceLongClick(space) }
-                        )
-                    }
+                    // FIX #21 (item #10 da auditoria): ver AppGridTile em
+                    // AppDrawerScreen.kt para a explicação completa —
+                    // aqui o efeito prático era mais sério ainda: como
+                    // pointerInput(space.id) nunca reinicia ao só mudar o
+                    // nome (o id não muda), renomear uma aba e tocar
+                    // segurar nela de novo abria o diálogo de renomear
+                    // com o NOME ANTIGO pré-preenchido.
+                    .combinedClickable(
+                        onClick = { onSpaceSelected(space.id) },
+                        onLongClick = { onSpaceLongClick(space) }
+                    )
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
@@ -441,7 +446,7 @@ private fun NotificationSummaryRow(info: LastNotificationInfo, onClick: () -> Un
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (info.appIcon != null) {
                 Image(
-                    painter = BitmapPainter(info.appIcon),
+                    bitmap = info.appIcon,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp)
                 )
@@ -547,24 +552,19 @@ private fun AppearancePanel(
  * Toque abre o app; toque longo remove o app do Space atual (a
  * vinculação a outros Spaces é feita pela Gaveta, com o menu completo).
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AppTile(app: AppInfo, hasNotification: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
     Column(
         modifier = Modifier
             .size(width = 72.dp, height = 88.dp)
-            .background(Color.Transparent)
-            .pointerInput(app.key) {
-                detectTapGestures(
-                    onTap = { onClick() },
-                    onLongPress = { onLongClick() }
-                )
-            },
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(modifier = Modifier.size(48.dp)) {
             if (app.icon != null) {
                 Image(
-                    painter = BitmapPainter(app.icon),
+                    bitmap = app.icon,
                     contentDescription = app.label,
                     modifier = Modifier.size(48.dp)
                 )

@@ -14,8 +14,8 @@ plugins {
 // (BuildConfig.VERSION_NAME) usam estas mesmas variáveis, então nunca
 // ficam dessincronizados.
 // ---------------------------------------------------------------------
-val appVersionCode = 10
-val appVersionName = "1.5.0"
+val appVersionCode = 11
+val appVersionName = "1.6.0"
 
 android {
     namespace = "com.feather.launcher"
@@ -47,13 +47,41 @@ android {
     // a build a partir deste repositório assina com a MESMA chave,
     // permitindo instalar novas versões por cima da anterior sem
     // desinstalar.
+    //
+    // FIX #20 (segurança, item #6 da auditoria): o buildType release
+    // usava essa MESMA chave de debug — versionada no repositório, com
+    // senha pública ("android"). Num repositório público com CI que
+    // publica o release já assinado, qualquer pessoa podia extrair essa
+    // chave e assinar um APK malicioso com a mesma assinatura, que o
+    // Android aceitaria como "atualização" por cima da instalação
+    // legítima — grave, considerando que o app pede Acesso a
+    // Notificações. Agora o release usa uma signingConfig própria, lida
+    // de variáveis de ambiente (nunca hardcoded, nunca commitada). Sem
+    // essas variáveis definidas (build local, sem os secrets do CI),
+    // cai de volta pro keystore de debug — para continuar funcionando
+    // sem configuração extra em testes locais, só não é mais o que vai
+    // pro release publicado pelo CI.
     // -------------------------------------------------------------
+    val releaseStoreFile = System.getenv("RELEASE_STORE_FILE")
+    // Nota: o workflow do GitHub Actions manda "" (string vazia), não a
+    // variável simplesmente ausente, quando o secret não está configurado
+    // — por isso isNullOrBlank(), não apenas != null.
+    val hasReleaseSigningEnv = !releaseStoreFile.isNullOrBlank()
+
     signingConfigs {
         getByName("debug") {
             storeFile = file("keystore/debug.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
+        }
+        create("release") {
+            if (hasReleaseSigningEnv) {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = System.getenv("RELEASE_STORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
         }
     }
 
@@ -69,12 +97,13 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // NOTA: para publicação real na Play Store, troque por uma
-            // signingConfig de release própria (chave privada segura,
-            // fora do repositório). Mantido no keystore de debug aqui
-            // apenas para permitir builds de release "instaláveis" em
-            // testes locais sem exigir configuração adicional.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseSigningEnv) {
+                signingConfigs.getByName("release")
+            } else {
+                // Fallback só para build local sem os secrets configurados
+                // (ver RELEASING.md para gerar e configurar a chave real).
+                signingConfigs.getByName("debug")
+            }
         }
     }
 

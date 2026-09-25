@@ -65,7 +65,9 @@ Outras funcionalidades:
 
 O projeto versiona um `debug.keystore` fixo em `app/keystore/debug.keystore`. Isso evita o problema comum de `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, que acontece quando cada máquina gera seu próprio keystore de debug automaticamente — com uma chave compartilhada no repositório, qualquer build (local ou do CI) pode ser instalada por cima da anterior sem precisar desinstalar.
 
-> Para publicação real (Play Store ou distribuição fora de testes), troque a `signingConfig` de `release` por uma chave própria e privada, fora do repositório — hoje ela reaproveita o keystore de debug apenas para conveniência de testes locais.
+### Assinatura (release)
+
+O release usa uma chave própria, configurada via variáveis de ambiente/secrets do CI — **nunca** versionada no repositório. Veja [`RELEASING.md`](RELEASING.md) para gerar a chave e configurar os 4 secrets necessários no GitHub. Sem essa configuração, o `assembleRelease` continua funcionando, só cai de volta para a chave de debug (build não fica com a assinatura de produção).
 
 ## CI/CD — build automático do APK
 

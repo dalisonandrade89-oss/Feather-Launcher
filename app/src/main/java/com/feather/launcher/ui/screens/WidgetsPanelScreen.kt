@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -55,7 +54,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -584,7 +582,7 @@ private fun WidgetProviderRow(option: WidgetProviderOption, onClick: () -> Unit)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .pointerInput(option.provider) { detectTapGestures(onTap = { onClick() }) }
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -595,7 +593,7 @@ private fun WidgetProviderRow(option: WidgetProviderOption, onClick: () -> Unit)
             contentAlignment = Alignment.Center
         ) {
             if (option.preview != null) {
-                Image(painter = BitmapPainter(option.preview), contentDescription = null, modifier = Modifier.size(48.dp))
+                Image(bitmap = option.preview, contentDescription = null, modifier = Modifier.size(48.dp))
             }
         }
         Column(modifier = Modifier.padding(start = 16.dp)) {
