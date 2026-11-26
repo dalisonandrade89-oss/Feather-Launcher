@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -150,7 +151,9 @@ fun HomeScreen(
                     currentTheme = themeMode,
                     onThemeSelected = onThemeModeChange,
                     accentColor = accentColor,
-                    onAccentColorChange = onAccentColorChange
+                    onAccentColorChange = onAccentColorChange,
+                    backgroundColor = backgroundColor,
+                    onBackgroundColorChange = onBackgroundColorChange
                 )
             }
 

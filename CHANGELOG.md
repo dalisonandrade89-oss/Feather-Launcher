@@ -10,6 +10,12 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.8.1] - 2026-11-26
+
+### Corrigido
+- Adicionado `import androidx.compose.foundation.layout.Spacer` e passados `backgroundColor` e `onBackgroundColorChange` para `AppearancePanel` em `HomeScreen.kt`.
+- Configurada publicação automática da Release na aba Releases do GitHub a cada `push` na branch principal via `.github/workflows/build.yml`.
+
 ## [1.8.0] - 2026-11-26
 
 ### Adicionado
