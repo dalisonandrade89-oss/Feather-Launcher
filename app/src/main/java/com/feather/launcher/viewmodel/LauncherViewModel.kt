@@ -18,6 +18,9 @@ import com.feather.launcher.data.toSearchNormalized
 import com.feather.launcher.notification.LastNotificationInfo
 import com.feather.launcher.notification.NotificationRepository
 import com.feather.launcher.widget.WidgetPlacement
+import com.feather.launcher.update.AppUpdateManager
+import com.feather.launcher.update.ReleaseInfo
+import com.feather.launcher.update.UpdateUiState
 import com.feather.launcher.widget.WidgetPrefs
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.PersistentMap
@@ -57,6 +60,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val appRepository = AppRepository(application)
     private val widgetPrefs = WidgetPrefs(application)
     private val appPrefs = AppPrefs(application)
+    private val updateManager = AppUpdateManager(application)
 
     // ---------- Apps ----------
 
@@ -219,6 +223,56 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         com.feather.launcher.notification.FeatherNotificationListenerService.dismiss(key)
     }
 
+    // ---------- Auto-Update via GitHub Releases ----------
+
+    private val _updateState = MutableStateFlow<UpdateUiState>(UpdateUiState.Idle)
+    val updateState: StateFlow<UpdateUiState> = _updateState
+
+    private var lastUpdateCheckElapsedMs: Long = 0L
+    private var updateJob: Job? = null
+
+    fun checkForUpdates(force: Boolean = false) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        // Evita bater na API do GitHub a cada retorno rápido para a Home (intervalo mínimo de 15 min)
+        if (!force && lastUpdateCheckElapsedMs > 0L && (now - lastUpdateCheckElapsedMs) < 15 * 60 * 1000L) {
+            return
+        }
+        if (_updateState.value is UpdateUiState.Downloading) return
+
+        lastUpdateCheckElapsedMs = now
+        viewModelScope.launch {
+            val release = runCatching { updateManager.checkForUpdate() }.getOrNull()
+            if (release != null && _updateState.value is UpdateUiState.Idle) {
+                _updateState.value = UpdateUiState.Available(release)
+            }
+        }
+    }
+
+    fun startUpdateDownload(release: ReleaseInfo) {
+        if (_updateState.value is UpdateUiState.Downloading) return
+        updateJob?.cancel()
+        updateJob = viewModelScope.launch {
+            _updateState.value = UpdateUiState.Downloading(release, progressPercent = 0)
+            try {
+                val apkFile = updateManager.downloadApk(release) { percent ->
+                    _updateState.value = UpdateUiState.Downloading(release, progressPercent = percent)
+                }
+                _updateState.value = UpdateUiState.ReadyToInstall(release, apkFile)
+            } catch (e: Exception) {
+                _updateState.value = UpdateUiState.Error(
+                    release = release,
+                    message = e.message ?: "Não foi possível baixar a atualização."
+                )
+            }
+        }
+    }
+
+    fun dismissUpdateDialog() {
+        if (_updateState.value !is UpdateUiState.Downloading) {
+            _updateState.value = UpdateUiState.Idle
+        }
+    }
+
     // ---------- Atualização automática da lista (instalar/desinstalar/atualizar) ----------
 
     private val launcherApps: LauncherApps? =
@@ -248,6 +302,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     init {
         _widgetPlacements.value = widgetPrefs.getPlacements().toPersistentList()
+        updateManager.cleanOldApks()
         loadApps()
         try {
             launcherApps?.registerCallback(launcherAppsCallback)

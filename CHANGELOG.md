@@ -10,6 +10,12 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.7.0] - 2026-11-26
+
+### Adicionado
+- **Auto-update via GitHub Releases:** o launcher consulta `/releases/latest` do repositório no GitHub ao abrir/voltar ao primeiro plano (com intervalo mínimo de 15 minutos entre checagens), exibe um popup (`AppUpdateDialog`) quando há tag mais recente que `BuildConfig.VERSION_NAME`, baixa o APK com barra de progresso em `cacheDir/updates/` e aciona o instalador de pacotes do Android via `FileProvider`.
+- **Publicação automática de Release no CI:** ao realizar commit/push nas branches principais, o workflow `.github/workflows/build.yml` lê `appVersionName` do `app/build.gradle.kts`, cria/atualiza a tag `vX.Y.Z` e anexa o `Feather-vX.Y.Z-release.apk` como GitHub Release oficial.
+
 ## [1.6.1] - 2026-09-25
 
 Continuação da auditoria: P2 (recomposição excessiva) e P8 (itens

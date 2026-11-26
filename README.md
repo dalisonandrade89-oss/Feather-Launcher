@@ -50,6 +50,7 @@ Outras funcionalidades:
 - **Aparência:** alternância entre tema Escuro, Claro e Preto AMOLED, além de cor de destaque (*accent color*) personalizada via seletor de cores. O botão de aparência fica no canto superior esquerdo da Home (longe do apoio natural do polegar, para reduzir toques acidentais).
 - **Widgets nativos:** suporte a `AppWidgetHost` para adicionar, redimensionar e remover widgets de outros apps, com fluxo completo de bind/configuração. Toque e segure o cantinho esquerdo da faixa no topo de um widget já adicionado para abrir "Alterar tamanho" ou "Remover" — só essa pequena área responde ao toque longo, deixando o resto do card livre tanto para o próprio widget quanto para o gesto de arrastar entre as abas. No seletor de widgets, as opções vêm agrupadas por app, cada uma com um resumo curto para diferenciar widgets parecidos do mesmo app.
 - **Busca:** filtro "contains" simples e sem acentuação na gaveta de apps.
+- **Auto-update via GitHub Releases:** verifica automaticamente se existe uma release mais nova no GitHub, exibe popup com notas da versão e, após confirmação do usuário, baixa o APK e abre o instalador do Android.
 - **Lista ou grade na gaveta:** um ícone dentro do próprio campo de busca alterna entre ver os apps em lista (nome ao lado) ou em grade (como a Home). O ícone é dinâmico — sempre mostra o modo *para o qual* o toque leva (ex.: em lista, aparece o ícone de grade), e a escolha é lembrada entre sessões.
 
 ## Como abrir e rodar

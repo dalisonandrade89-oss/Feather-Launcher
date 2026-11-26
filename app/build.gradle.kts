@@ -14,8 +14,8 @@ plugins {
 // (BuildConfig.VERSION_NAME) usam estas mesmas variáveis, então nunca
 // ficam dessincronizados.
 // ---------------------------------------------------------------------
-val appVersionCode = 12
-val appVersionName = "1.6.1"
+val appVersionCode = 13
+val appVersionName = "1.7.0"
 
 android {
     namespace = "com.feather.launcher"
@@ -31,6 +31,8 @@ android {
         versionName = appVersionName
 
         vectorDrawables { useSupportLibrary = true }
+        buildConfigField("String", "GITHUB_OWNER", "\"${System.getenv("GITHUB_OWNER") ?: "dalisonandrade89-oss"}\"")
+        buildConfigField("String", "GITHUB_REPO", "\"${System.getenv("GITHUB_REPO") ?: "Feather-Launcher"}\"")
     }
 
     // -------------------------------------------------------------

@@ -17,6 +17,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -25,6 +26,9 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feather.launcher.data.AppInfo
 import com.feather.launcher.ui.LauncherApp
+import com.feather.launcher.update.AppUpdateDialog
+import com.feather.launcher.update.AppUpdateManager
+import com.feather.launcher.update.UpdateUiState
 import com.feather.launcher.ui.theme.FeatherTheme
 import com.feather.launcher.viewmodel.LauncherViewModel
 import com.feather.launcher.widget.WidgetHostManager
@@ -38,6 +42,8 @@ class MainActivity : ComponentActivity() {
     private val viewModel: LauncherViewModel by viewModels()
 
     private lateinit var widgetHostManager: WidgetHostManager
+    private lateinit var appUpdateManager: AppUpdateManager
+    private var canInstallPackages by mutableStateOf(false)
 
     /** Estado lido pela UI Compose; atualizado também fora da composição (onResume). */
     private var notificationAccessGranted by mutableStateOf(false)
@@ -76,7 +82,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         widgetHostManager = WidgetHostManager(applicationContext)
+        appUpdateManager = AppUpdateManager(applicationContext)
         notificationAccessGranted = isNotificationAccessGranted()
+        canInstallPackages = appUpdateManager.canRequestPackageInstalls()
+        viewModel.checkForUpdates()
+        canInstallPackages = appUpdateManager.canRequestPackageInstalls()
+        viewModel.checkForUpdates()
 
         setContent {
             // FIX #25 (P2 da auditoria): collectAsStateWithLifecycle em vez
@@ -102,6 +113,14 @@ class MainActivity : ComponentActivity() {
                     val lastNotification by viewModel.lastNotification.collectAsStateWithLifecycle()
                     val appsWithNotifications by viewModel.appsWithNotifications.collectAsStateWithLifecycle()
                     val widgetPlacements by viewModel.widgetPlacements.collectAsStateWithLifecycle()
+                    val updateState by viewModel.updateState.collectAsStateWithLifecycle()
+
+                    LaunchedEffect(updateState, canInstallPackages) {
+                        val current = updateState
+                        if (current is UpdateUiState.ReadyToInstall && canInstallPackages) {
+                            installApkFile(current.apkFile)
+                        }
+                    }
 
                     LauncherApp(
                         filteredApps = filteredApps,
@@ -136,6 +155,20 @@ class MainActivity : ComponentActivity() {
                         loadAvailableWidgets = ::loadAvailableWidgets,
                         onWidgetProviderSelected = ::onWidgetProviderSelected
                     )
+
+                    AppUpdateDialog(
+                        state = updateState,
+                        needsInstallPermission = !canInstallPackages,
+                        onConfirmDownload = viewModel::startUpdateDownload,
+                        onInstallNow = {
+                            val current = updateState
+                            if (current is UpdateUiState.ReadyToInstall) {
+                                installApkFile(current.apkFile)
+                            }
+                        },
+                        onOpenInstallPermission = ::openUnknownSourcesSettings,
+                        onDismiss = viewModel::dismissUpdateDialog
+                    )
                 }
             }
         }
@@ -151,11 +184,38 @@ class MainActivity : ComponentActivity() {
         // O usuário pode ter concedido/revogado o acesso a notificações
         // em Configurações enquanto o app estava em segundo plano.
         notificationAccessGranted = isNotificationAccessGranted()
+        canInstallPackages = appUpdateManager.canRequestPackageInstalls()
+        viewModel.checkForUpdates()
     }
 
     override fun onStop() {
         widgetHostManager.stopListening()
         super.onStop()
+    }
+
+    // ---------- Auto-Update: instalação do APK ----------
+
+    private fun openUnknownSourcesSettings() {
+        try {
+            startActivity(appUpdateManager.buildUnknownSourcesSettingsIntent())
+        } catch (e: Exception) {
+            Log.w(TAG, "Não foi possível abrir configuração de fontes desconhecidas", e)
+            showToast("Abra Configurações e permita instalar apps desconhecidos.")
+        }
+    }
+
+    private fun installApkFile(apkFile: java.io.File) {
+        if (!appUpdateManager.canRequestPackageInstalls()) {
+            canInstallPackages = false
+            openUnknownSourcesSettings()
+            return
+        }
+        try {
+            startActivity(appUpdateManager.buildInstallIntent(apkFile))
+        } catch (e: Exception) {
+            Log.w(TAG, "Não foi possível iniciar o instalador de pacotes", e)
+            showToast("Não foi possível abrir o instalador do Android.")
+        }
     }
 
     // ---------- Widgets: seletor visual + bind + configuração ----------
