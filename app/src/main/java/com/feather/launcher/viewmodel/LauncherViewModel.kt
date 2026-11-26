@@ -233,7 +233,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun checkForUpdates(force: Boolean = false) {
         val now = android.os.SystemClock.elapsedRealtime()
-        // Evita bater na API do GitHub a cada retorno rápido para a Home (intervalo mínimo de 15 min)
         if (!force && lastUpdateCheckElapsedMs > 0L && (now - lastUpdateCheckElapsedMs) < 15 * 60 * 1000L) {
             return
         }

@@ -32,28 +32,17 @@ sealed interface UpdateUiState {
     data class Error(val release: ReleaseInfo?, val message: String) : UpdateUiState
 }
 
-/**
- * Gerencia verificação, download e instalação de releases do GitHub
- * usando apenas APIs nativas (HttpURLConnection + org.json + FileProvider),
- * sem adicionar bibliotecas de rede pesadas no APK.
- */
 class AppUpdateManager(private val context: Context) {
 
     private val updatesDir: File
         get() = File(context.cacheDir, "updates").apply { mkdirs() }
 
-    /** Remove APKs antigos do cache para não ocupar espaço no aparelho. */
     fun cleanOldApks() {
         runCatching {
             updatesDir.listFiles()?.forEach { it.delete() }
         }
     }
 
-    /**
-     * Consulta o endpoint /releases/latest do repositório no GitHub.
-     * Retorna [ReleaseInfo] apenas se a tag publicada for mais recente
-     * que [BuildConfig.VERSION_NAME] e contiver um asset .apk.
-     */
     suspend fun checkForUpdate(): ReleaseInfo? = withContext(Dispatchers.IO) {
         val owner = BuildConfig.GITHUB_OWNER
         val repo = BuildConfig.GITHUB_REPO
@@ -96,7 +85,6 @@ class AppUpdateManager(private val context: Context) {
                 val name = asset.optString("name", "")
                 val url = asset.optString("browser_download_url", "")
                 if (name.endsWith(".apk", ignoreCase = true) && url.isNotBlank()) {
-                    // Prioriza APK release se houver mais de um asset .apk
                     if (selectedUrl == null || name.contains("release", ignoreCase = true)) {
                         selectedUrl = url
                         selectedName = name
@@ -120,9 +108,6 @@ class AppUpdateManager(private val context: Context) {
         }
     }
 
-    /**
-     * Baixa o APK da release para cacheDir/updates/ reportando progresso (0..100).
-     */
     suspend fun downloadApk(
         release: ReleaseInfo,
         onProgress: (Int?) -> Unit
@@ -218,7 +203,6 @@ class AppUpdateManager(private val context: Context) {
     }
 
     companion object {
-        /** Compara versões semânticas simples (ex.: "1.7.0" > "1.6.1"). */
         internal fun isRemoteNewer(remote: String, local: String): Boolean {
             val remoteParts = parseNumericParts(remote)
             val localParts = parseNumericParts(local)

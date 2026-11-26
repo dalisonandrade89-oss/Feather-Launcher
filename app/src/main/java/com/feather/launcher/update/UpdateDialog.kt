@@ -38,7 +38,7 @@ fun AppUpdateDialog(
                 text = {
                     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                         Text(
-                            text = "Versão atual: v${BuildConfig.VERSION_NAME} → Nova: v${release.versionName}",
+                            text = "Versão atual: v${BuildConfig.VERSION_NAME} -> Nova: v${release.versionName}",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         if (release.releaseNotes.isNotBlank()) {
@@ -66,7 +66,7 @@ fun AppUpdateDialog(
 
         is UpdateUiState.Downloading -> {
             AlertDialog(
-                onDismissRequest = { /* Não fecha enquanto baixa */ },
+                onDismissRequest = {},
                 title = {
                     Text(text = "Baixando ${state.release.tagName}...")
                 },
@@ -112,7 +112,7 @@ fun AppUpdateDialog(
                 text = {
                     Text(
                         text = if (needsInstallPermission) {
-                            "Para o Feather Launcher instalar atualizações, autorize "Instalar apps desconhecidos" nas configurações do Android e volte para concluir."
+                            "Para o Feather Launcher instalar atualizações, autorize Instalar apps desconhecidos nas configurações do Android e volte para concluir."
                         } else {
                             "O download da versão ${state.release.tagName} foi concluído. Toque em Instalar para atualizar agora."
                         },
