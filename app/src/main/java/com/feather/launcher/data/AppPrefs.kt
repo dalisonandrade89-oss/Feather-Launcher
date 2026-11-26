@@ -37,6 +37,13 @@ class AppPrefs(context: Context) {
         prefs.edit().putString(KEY_ACCENT_COLOR, hex).apply()
     }
 
+    /** Cor de fundo personalizada em hex "#RRGGBB", ou null = usar a cor padrão do ThemeMode. */
+    fun getBackgroundColorHex(): String? = prefs.getString(KEY_BACKGROUND_COLOR, null)
+
+    fun setBackgroundColorHex(hex: String?) {
+        prefs.edit().putString(KEY_BACKGROUND_COLOR, hex).apply()
+    }
+
     /** Visualização da Gaveta de apps (lista ou grade), lembrada entre sessões. */
     fun getDrawerViewMode(): AppDrawerViewMode {
         val stored = prefs.getString(KEY_DRAWER_VIEW_MODE, null) ?: return AppDrawerViewMode.LIST
@@ -165,6 +172,7 @@ class AppPrefs(context: Context) {
         private const val PREFS_NAME = "app_prefs"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_ACCENT_COLOR = "accent_color"
+        private const val KEY_BACKGROUND_COLOR = "background_color"
         private const val KEY_DRAWER_VIEW_MODE = "drawer_view_mode"
         private const val KEY_SPACES = "spaces_v2"
         private const val KEY_SPACE_APPS_PREFIX = "space_apps_"

@@ -208,6 +208,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         appPrefs.setAccentColorHex(color?.toHexString())
     }
 
+    private val _backgroundColor = MutableStateFlow(appPrefs.getBackgroundColorHex()?.hexToColorOrNull())
+    val backgroundColor: StateFlow<Color?> = _backgroundColor
+
+    fun onBackgroundColorChange(color: Color?) {
+        _backgroundColor.value = color
+        appPrefs.setBackgroundColorHex(color?.toHexString())
+    }
+
     // ---------- Notificações ----------
 
     /** Repassa diretamente o singleton do serviço de notificações para a UI observar. */

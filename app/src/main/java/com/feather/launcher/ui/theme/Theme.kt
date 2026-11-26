@@ -1,10 +1,12 @@
 package com.feather.launcher.ui.theme
 
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import com.feather.launcher.data.ThemeMode
 
@@ -20,8 +22,6 @@ private val DarkColors = darkColorScheme(
     onSurfaceVariant = FeatherOnSurfaceVariant
 )
 
-// AMOLED reaproveita a maior parte da paleta escura, trocando apenas
-// background/surface para preto puro (economia de bateria em telas OLED).
 private val AmoledColors = darkColorScheme(
     background = FeatherAmoledBackground,
     surface = FeatherAmoledSurface,
@@ -46,15 +46,14 @@ private val LightColors = lightColorScheme(
 )
 
 /**
- * Tema do launcher. Recebe o [ThemeMode] e, opcionalmente, uma cor de
- * destaque (accent) personalizada escolhida pelo usuário no seletor de
- * cores — quando presente, ela substitui `primary`/`onPrimary` do
- * esquema base, mantendo o resto da paleta (fundo, superfícies) igual.
+ * Aplica cor de fundo e cor de destaque (accent) opcionais sobre o esquema base,
+ * mantendo contraste legível e superfícies leves sem overdraw extra.
  */
 @Composable
 fun FeatherTheme(
     themeMode: ThemeMode = ThemeMode.DARK,
     accentColor: Color? = null,
+    backgroundColor: Color? = null,
     content: @Composable () -> Unit
 ) {
     val baseColorScheme = when (themeMode) {
@@ -63,17 +62,21 @@ fun FeatherTheme(
         ThemeMode.LIGHT -> LightColors
     }
 
+    val withBackground = if (backgroundColor != null) {
+        baseColorScheme.applyCustomBackground(backgroundColor)
+    } else {
+        baseColorScheme
+    }
+
     val colorScheme = if (accentColor != null) {
-        // Escolhe texto preto ou branco sobre a cor de destaque conforme
-        // sua luminância, para manter contraste legível automaticamente.
         val onAccent = if (accentColor.luminance() > 0.5f) Color.Black else Color.White
-        baseColorScheme.copy(
+        withBackground.copy(
             primary = accentColor,
             onPrimary = onAccent,
             secondary = accentColor
         )
     } else {
-        baseColorScheme
+        withBackground
     }
 
     MaterialTheme(
@@ -81,4 +84,27 @@ fun FeatherTheme(
         typography = FeatherTypography,
         content = content
     )
+}
+
+private fun ColorScheme.applyCustomBackground(bg: Color): ColorScheme {
+    val isLightBg = bg.luminance() > 0.42f
+    return if (isLightBg) {
+        copy(
+            background = bg,
+            surface = lerp(bg, Color.White, 0.45f),
+            surfaceVariant = lerp(bg, Color.Black, 0.08f),
+            onBackground = Color(0xFF1A1B1E),
+            onSurface = Color(0xFF1A1B1E),
+            onSurfaceVariant = Color(0xFF4A4E54)
+        )
+    } else {
+        copy(
+            background = bg,
+            surface = lerp(bg, Color.White, 0.05f),
+            surfaceVariant = lerp(bg, Color.White, 0.11f),
+            onBackground = Color(0xFFEDEEF0),
+            onSurface = Color(0xFFEDEEF0),
+            onSurfaceVariant = Color(0xFFB0B6BE)
+        )
+    }
 }

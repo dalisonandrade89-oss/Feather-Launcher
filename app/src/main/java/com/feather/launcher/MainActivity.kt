@@ -100,8 +100,13 @@ class MainActivity : ComponentActivity() {
             // projeto, só não era usada em lugar nenhum.
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             val accentColor by viewModel.accentColor.collectAsStateWithLifecycle()
+            val backgroundColor by viewModel.backgroundColor.collectAsStateWithLifecycle()
 
-            FeatherTheme(themeMode = themeMode, accentColor = accentColor) {
+            FeatherTheme(
+                themeMode = themeMode,
+                accentColor = accentColor,
+                backgroundColor = backgroundColor
+            ) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val filteredApps by viewModel.filteredApps.collectAsStateWithLifecycle()
                     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
@@ -141,6 +146,8 @@ class MainActivity : ComponentActivity() {
                         onThemeModeChange = viewModel::onThemeModeChange,
                         accentColor = accentColor,
                         onAccentColorChange = viewModel::onAccentColorChange,
+                        backgroundColor = backgroundColor,
+                        onBackgroundColorChange = viewModel::onBackgroundColorChange,
                         appsWithNotifications = appsWithNotifications,
                         lastNotification = lastNotification,
                         onNotificationClick = ::onNotificationSummaryClick,

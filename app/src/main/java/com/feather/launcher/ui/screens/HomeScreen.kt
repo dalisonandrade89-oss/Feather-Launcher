@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -64,6 +65,7 @@ import com.feather.launcher.data.SpaceDef
 import com.feather.launcher.data.ThemeMode
 import com.feather.launcher.notification.LastNotificationInfo
 import com.feather.launcher.ui.components.ColorPickerDialog
+import com.feather.launcher.ui.components.ColorTargetMode
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.PersistentSet
 import java.text.SimpleDateFormat
@@ -84,6 +86,8 @@ fun HomeScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     accentColor: Color?,
     onAccentColorChange: (Color?) -> Unit,
+    backgroundColor: Color?,
+    onBackgroundColorChange: (Color?) -> Unit,
     appsWithNotifications: PersistentSet<String>,
     lastNotification: LastNotificationInfo?,
     onNotificationClick: (LastNotificationInfo) -> Unit,
@@ -555,9 +559,11 @@ private fun AppearancePanel(
     currentTheme: ThemeMode,
     onThemeSelected: (ThemeMode) -> Unit,
     accentColor: Color?,
-    onAccentColorChange: (Color?) -> Unit
+    onAccentColorChange: (Color?) -> Unit,
+    backgroundColor: Color?,
+    onBackgroundColorChange: (Color?) -> Unit
 ) {
-    var showColorPicker by remember { mutableStateOf(false) }
+    var activePickerMode by remember { mutableStateOf<ColorTargetMode?>(null) }
 
     Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
         Text(
@@ -573,7 +579,10 @@ private fun AppearancePanel(
             ThemeMode.entries.forEach { mode ->
                 FilterChip(
                     selected = mode == currentTheme,
-                    onClick = { onThemeSelected(mode) },
+                    onClick = {
+                        onThemeSelected(mode)
+                        onBackgroundColorChange(null)
+                    },
                     label = { Text(mode.label) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -583,41 +592,80 @@ private fun AppearancePanel(
             }
         }
 
+        ColorOptionRow(
+            label = "Cor de destaque",
+            currentColor = accentColor ?: MaterialTheme.colorScheme.primary,
+            isCustom = accentColor != null,
+            onPickClick = { activePickerMode = ColorTargetMode.ACCENT },
+            onResetClick = { onAccentColorChange(null) }
+        )
+
+        ColorOptionRow(
+            label = "Cor de fundo",
+            currentColor = backgroundColor ?: MaterialTheme.colorScheme.background,
+            isCustom = backgroundColor != null,
+            onPickClick = { activePickerMode = ColorTargetMode.BACKGROUND },
+            onResetClick = { onBackgroundColorChange(null) }
+        )
+    }
+
+    val pickerMode = activePickerMode
+    if (pickerMode != null) {
+        val initial = when (pickerMode) {
+            ColorTargetMode.ACCENT -> accentColor ?: MaterialTheme.colorScheme.primary
+            ColorTargetMode.BACKGROUND -> backgroundColor ?: MaterialTheme.colorScheme.background
+        }
+        ColorPickerDialog(
+            mode = pickerMode,
+            initialColor = initial,
+            onConfirm = { chosen ->
+                when (pickerMode) {
+                    ColorTargetMode.ACCENT -> onAccentColorChange(chosen)
+                    ColorTargetMode.BACKGROUND -> onBackgroundColorChange(chosen)
+                }
+                activePickerMode = null
+            },
+            onDismiss = { activePickerMode = null }
+        )
+    }
+}
+
+@Composable
+private fun ColorOptionRow(
+    label: String,
+    currentColor: Color,
+    isCustom: Boolean,
+    onPickClick: () -> Unit,
+    onResetClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable(onClick = onPickClick)
         ) {
             Box(
                 modifier = Modifier
-                    .size(28.dp)
-                    .background(
-                        color = accentColor ?: MaterialTheme.colorScheme.primary,
-                        shape = CircleShape
-                    )
-                    .clickable { showColorPicker = true }
+                    .size(26.dp)
+                    .background(color = currentColor, shape = CircleShape)
             )
-            TextButton(onClick = { showColorPicker = true }) {
-                Text("Cor de destaque personalizada")
-            }
-            if (accentColor != null) {
-                TextButton(onClick = { onAccentColorChange(null) }) {
-                    Text("Redefinir")
-                }
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
+        if (isCustom) {
+            TextButton(onClick = onResetClick) {
+                Text("Redefinir")
             }
         }
-    }
-
-    if (showColorPicker) {
-        ColorPickerDialog(
-            initialColor = accentColor ?: MaterialTheme.colorScheme.primary,
-            onConfirm = { color ->
-                onAccentColorChange(color)
-                showColorPicker = false
-            },
-            onDismiss = { showColorPicker = false }
-        )
     }
 }
 

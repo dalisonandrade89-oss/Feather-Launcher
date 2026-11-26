@@ -10,6 +10,11 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.8.0] - 2026-11-26
+
+### Adicionado
+- **Seletor moderno de cor de fundo e cor de destaque:** `ColorPickerDialog` agora permite escolher cor de destaque ou cor de fundo com campo 2D de saturação/brilho + barra de matiz + swatches rápidos + exibição em HEX, persistindo ambas em `AppPrefs` e ajustando automaticamente contraste e superfícies em `FeatherTheme`.
+
 ## [1.7.0] - 2026-11-26
 
 ### Adicionado
