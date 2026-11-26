@@ -8,6 +8,7 @@ import android.text.format.DateFormat
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -58,10 +61,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.feather.launcher.data.AppInfo
+import com.feather.launcher.data.NotificationScale
 import com.feather.launcher.data.SpaceDef
 import com.feather.launcher.data.ThemeMode
 import com.feather.launcher.notification.LastNotificationInfo
@@ -89,6 +94,8 @@ fun HomeScreen(
     onAccentColorChange: (Color?) -> Unit,
     backgroundColor: Color?,
     onBackgroundColorChange: (Color?) -> Unit,
+    notificationScale: NotificationScale,
+    onNotificationScaleChange: (NotificationScale) -> Unit,
     appsWithNotifications: PersistentSet<String>,
     lastNotification: LastNotificationInfo?,
     onNotificationClick: (LastNotificationInfo) -> Unit,
@@ -143,7 +150,11 @@ fun HomeScreen(
             // baixo), isso é overdraw evitável para um elemento que já
             // aparece/some rápido o suficiente sem precisar de transição.
             lastNotification?.let {
-                NotificationSummaryRow(info = it, onClick = { onNotificationClick(it) })
+                NotificationSummaryRow(
+                    info = it,
+                    scale = notificationScale,
+                    onClick = { onNotificationClick(it) }
+                )
             }
 
             if (showAppearancePanel) {
@@ -153,7 +164,9 @@ fun HomeScreen(
                     accentColor = accentColor,
                     onAccentColorChange = onAccentColorChange,
                     backgroundColor = backgroundColor,
-                    onBackgroundColorChange = onBackgroundColorChange
+                    onBackgroundColorChange = onBackgroundColorChange,
+                    notificationScale = notificationScale,
+                    onNotificationScaleChange = onNotificationScaleChange
                 )
             }
 
@@ -515,47 +528,111 @@ private fun NotificationAccessBanner(onClick: () -> Unit) {
  * o texto precisar.
  */
 @Composable
-private fun NotificationSummaryRow(info: LastNotificationInfo, onClick: () -> Unit) {
-    Column(
+private fun NotificationSummaryRow(
+    info: LastNotificationInfo,
+    scale: NotificationScale,
+    onClick: () -> Unit
+) {
+    val factor = scale.multiplier
+    val primaryAccent = MaterialTheme.colorScheme.primary
+    val cardBg = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f)
+    val badgeBg = primaryAccent.copy(alpha = 0.16f)
+    val iconSize = (18.dp * factor)
+    val badgeSize = (28.dp * factor)
+    val headingFontSize = (12.sp * factor)
+    val bodyFontSize = (12.5.sp * factor)
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 6.dp)
-            .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 20.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(cardBg)
+            .border(
+                width = 1.dp,
+                color = primaryAccent.copy(alpha = 0.35f),
+                shape = RoundedCornerShape(14.dp)
+            )
+            .clickable(onClick = onClick)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (info.appIcon != null) {
-                Image(
-                    bitmap = info.appIcon,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-                Box(modifier = Modifier.padding(start = 6.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(badgeSize + (18.dp * factor))
+                    .background(primaryAccent)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp * factor),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(badgeSize)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(badgeBg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (info.appIcon != null) {
+                        Image(
+                            bitmap = info.appIcon,
+                            contentDescription = null,
+                            modifier = Modifier.size(iconSize)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp * factor)
+                                .clip(CircleShape)
+                                .background(primaryAccent)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp * factor)
+                                .clip(CircleShape)
+                                .background(primaryAccent)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        val heading = listOf(info.appLabel, info.title)
+                            .filter { it.isNotBlank() }
+                            .joinToString(" · ")
+                        Text(
+                            text = heading,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = headingFontSize),
+                            color = primaryAccent,
+                            maxLines = 1
+                        )
+                    }
+
+                    if (info.text.isNotBlank()) {
+                        Text(
+                            text = info.text,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = bodyFontSize),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 3,
+                            modifier = Modifier.padding(top = 3.dp)
+                        )
+                    }
+                }
             }
-            val heading = listOf(info.appLabel, info.title)
-                .filter { it.isNotBlank() }
-                .joinToString(" · ")
-            Text(
-                text = heading,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                textAlign = TextAlign.Center
-            )
-        }
-        if (info.text.isNotBlank()) {
-            Text(
-                text = info.text,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 2.dp, start = 8.dp, end = 8.dp)
-            )
         }
     }
 }
 
-// ---------- Painel de aparência (tema + cor de destaque) ----------
+// ---------- Painel de aparência (tema + cores + tamanho da notificação) ----------
 
 @Composable
 private fun AppearancePanel(
@@ -564,7 +641,9 @@ private fun AppearancePanel(
     accentColor: Color?,
     onAccentColorChange: (Color?) -> Unit,
     backgroundColor: Color?,
-    onBackgroundColorChange: (Color?) -> Unit
+    onBackgroundColorChange: (Color?) -> Unit,
+    notificationScale: NotificationScale,
+    onNotificationScaleChange: (NotificationScale) -> Unit
 ) {
     var activePickerMode by remember { mutableStateOf<ColorTargetMode?>(null) }
 
@@ -610,6 +689,29 @@ private fun AppearancePanel(
             onPickClick = { activePickerMode = ColorTargetMode.BACKGROUND },
             onResetClick = { onBackgroundColorChange(null) }
         )
+
+        Text(
+            text = "Tamanho da notificação",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            NotificationScale.entries.forEach { scaleOption ->
+                FilterChip(
+                    selected = scaleOption == notificationScale,
+                    onClick = { onNotificationScaleChange(scaleOption) },
+                    label = { Text(scaleOption.label) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
+            }
+        }
     }
 
     val pickerMode = activePickerMode

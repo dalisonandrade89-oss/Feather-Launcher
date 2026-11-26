@@ -59,3 +59,11 @@ enum class ThemeMode(val label: String) {
 enum class AppDrawerViewMode {
     LIST, GRID
 }
+
+/** Escala visual da notificação exibida abaixo do relógio na Home. */
+enum class NotificationScale(val label: String, val multiplier: Float) {
+    COMPACT("P", 0.9f),
+    MEDIUM("M", 1.0f),
+    LARGE("G", 1.18f),
+    EXTRA_LARGE("GG", 1.35f)
+}

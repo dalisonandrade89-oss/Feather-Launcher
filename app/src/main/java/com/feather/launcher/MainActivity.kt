@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             val accentColor by viewModel.accentColor.collectAsStateWithLifecycle()
             val backgroundColor by viewModel.backgroundColor.collectAsStateWithLifecycle()
+            val notificationScale by viewModel.notificationScale.collectAsStateWithLifecycle()
 
             FeatherTheme(
                 themeMode = themeMode,
@@ -148,6 +149,8 @@ class MainActivity : ComponentActivity() {
                         onAccentColorChange = viewModel::onAccentColorChange,
                         backgroundColor = backgroundColor,
                         onBackgroundColorChange = viewModel::onBackgroundColorChange,
+                        notificationScale = notificationScale,
+                        onNotificationScaleChange = viewModel::onNotificationScaleChange,
                         appsWithNotifications = appsWithNotifications,
                         lastNotification = lastNotification,
                         onNotificationClick = ::onNotificationSummaryClick,

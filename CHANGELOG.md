@@ -10,6 +10,12 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.9.0] - 2026-11-26
+
+### Adicionado
+- **Notificação em destaque visual abaixo do relógio:** `NotificationSummaryRow` agora exibe um cartão compacto com barra lateral e borda na cor de destaque (`primary`), ícone em badge e ponto indicador, destacando o alerta visualmente sem usar animações contínuas ou camadas extras na GPU.
+- **Tamanho ajustável na engrenagem:** adicionada seleção de escala (`P`, `M`, `G`, `GG`) no painel de aparência com persistência em `AppPrefs` (`notification_scale`).
+
 ## [1.8.1] - 2026-11-26
 
 ### Corrigido

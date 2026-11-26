@@ -44,6 +44,21 @@ class AppPrefs(context: Context) {
         prefs.edit().putString(KEY_BACKGROUND_COLOR, hex).apply()
     }
 
+    /** Escala visual da notificação abaixo do relógio na Home. */
+    fun getNotificationScale(): NotificationScale {
+        val stored = prefs.getString(KEY_NOTIFICATION_SCALE, null) ?: return NotificationScale.MEDIUM
+        return try {
+            NotificationScale.valueOf(stored)
+        } catch (_: IllegalArgumentException) {
+            NotificationScale.MEDIUM
+        }
+    }
+
+    fun setNotificationScale(scale: NotificationScale) {
+        prefs.edit().putString(KEY_NOTIFICATION_SCALE, scale.name).apply()
+    }
+
+
     /** Visualização da Gaveta de apps (lista ou grade), lembrada entre sessões. */
     fun getDrawerViewMode(): AppDrawerViewMode {
         val stored = prefs.getString(KEY_DRAWER_VIEW_MODE, null) ?: return AppDrawerViewMode.LIST
@@ -173,6 +188,7 @@ class AppPrefs(context: Context) {
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_ACCENT_COLOR = "accent_color"
         private const val KEY_BACKGROUND_COLOR = "background_color"
+        private const val KEY_NOTIFICATION_SCALE = "notification_scale"
         private const val KEY_DRAWER_VIEW_MODE = "drawer_view_mode"
         private const val KEY_SPACES = "spaces_v2"
         private const val KEY_SPACE_APPS_PREFIX = "space_apps_"

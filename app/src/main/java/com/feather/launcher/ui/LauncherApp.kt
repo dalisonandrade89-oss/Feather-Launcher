@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.feather.launcher.data.AppDrawerViewMode
 import com.feather.launcher.data.AppInfo
+import com.feather.launcher.data.NotificationScale
 import com.feather.launcher.data.SpaceDef
 import com.feather.launcher.data.ThemeMode
 import com.feather.launcher.notification.LastNotificationInfo
@@ -69,6 +70,8 @@ fun LauncherApp(
     onAccentColorChange: (Color?) -> Unit,
     backgroundColor: Color?,
     onBackgroundColorChange: (Color?) -> Unit,
+    notificationScale: NotificationScale,
+    onNotificationScaleChange: (NotificationScale) -> Unit,
     appsWithNotifications: PersistentSet<String>,
     lastNotification: LastNotificationInfo?,
     onNotificationClick: (LastNotificationInfo) -> Unit,
@@ -144,6 +147,8 @@ fun LauncherApp(
                     onAccentColorChange = onAccentColorChange,
                     backgroundColor = backgroundColor,
                     onBackgroundColorChange = onBackgroundColorChange,
+                    notificationScale = notificationScale,
+                    onNotificationScaleChange = onNotificationScaleChange,
                     appsWithNotifications = appsWithNotifications,
                     lastNotification = lastNotification,
                     onNotificationClick = onNotificationClick,

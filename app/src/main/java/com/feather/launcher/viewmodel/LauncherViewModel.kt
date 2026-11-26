@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.feather.launcher.data.AppDrawerViewMode
 import com.feather.launcher.data.AppInfo
+import com.feather.launcher.data.NotificationScale
 import com.feather.launcher.data.AppPrefs
 import com.feather.launcher.data.AppRepository
 import com.feather.launcher.data.SpaceDef
@@ -215,6 +216,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _backgroundColor.value = color
         appPrefs.setBackgroundColorHex(color?.toHexString())
     }
+
+    private val _notificationScale = MutableStateFlow(appPrefs.getNotificationScale())
+    val notificationScale: StateFlow<NotificationScale> = _notificationScale
+
+    fun onNotificationScaleChange(scale: NotificationScale) {
+        _notificationScale.value = scale
+        appPrefs.setNotificationScale(scale)
+    }
+
 
     // ---------- Notificações ----------
 
