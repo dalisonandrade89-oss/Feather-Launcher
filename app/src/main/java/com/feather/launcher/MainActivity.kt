@@ -157,6 +157,7 @@ class MainActivity : ComponentActivity() {
                         notificationAccessGranted = notificationAccessGranted,
                         onRequestNotificationAccess = ::openNotificationAccessSettings,
                         onAppClick = ::launchApp,
+                        onOpenAppInfo = ::openAppInfoScreen,
                         onRemoveAppFromCurrentSpace = viewModel::removeAppFromCurrentSpace,
                         widgetPlacements = widgetPlacements,
                         createWidgetHostView = widgetHostManager::createHostView,

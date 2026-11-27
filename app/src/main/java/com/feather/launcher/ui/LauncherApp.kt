@@ -78,6 +78,7 @@ fun LauncherApp(
     notificationAccessGranted: Boolean,
     onRequestNotificationAccess: () -> Unit,
     onAppClick: (AppInfo) -> Unit,
+    onOpenAppInfo: (AppInfo) -> Unit,
     onRemoveAppFromCurrentSpace: (AppInfo) -> Unit,
     widgetPlacements: PersistentList<WidgetPlacement>,
     createWidgetHostView: (Int) -> AppWidgetHostView?,
@@ -172,7 +173,8 @@ fun LauncherApp(
                         if (searchQuery.isNotEmpty()) {
                             onSearchQueryChange("")
                         }
-                    }
+                    },
+                    onOpenAppInfo = onOpenAppInfo
                 )
             }
         }

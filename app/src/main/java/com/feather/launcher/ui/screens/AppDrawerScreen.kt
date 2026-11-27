@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,9 +24,11 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -81,6 +85,7 @@ fun AppDrawerScreen(
     assignments: PersistentMap<String, PersistentSet<String>>,
     onToggleAppInSpace: (String, AppInfo) -> Unit,
     onAppClick: (AppInfo) -> Unit,
+    onOpenAppInfo: (AppInfo) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var appForSpaceDialog by remember { mutableStateOf<AppInfo?>(null) }
@@ -129,6 +134,10 @@ fun AppDrawerScreen(
             spaces = spaces,
             assignments = assignments,
             onToggle = { spaceId -> onToggleAppInSpace(spaceId, app) },
+            onOpenAppInfo = {
+                appForSpaceDialog = null
+                onOpenAppInfo(app)
+            },
             onDismiss = { appForSpaceDialog = null }
         )
     }
@@ -240,6 +249,7 @@ private fun SpaceAssignmentDialog(
     spaces: PersistentList<SpaceDef>,
     assignments: PersistentMap<String, PersistentSet<String>>,
     onToggle: (String) -> Unit,
+    onOpenAppInfo: () -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -257,6 +267,30 @@ private fun SpaceAssignmentDialog(
                     ) {
                         Checkbox(checked = checked, onCheckedChange = { onToggle(space.id) })
                         Text(space.name, modifier = Modifier.padding(start = 4.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                TextButton(
+                    onClick = onOpenAppInfo,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Dados do app",
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
                     }
                 }
             }

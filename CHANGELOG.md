@@ -10,6 +10,11 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.9.2] - 2026-11-27
+
+### Adicionado
+- **Dados do app no menu de abas da gaveta:** incluída a ação **Dados do app** dentro do diálogo de seleção de abas (`SpaceAssignmentDialog`), abrindo `Settings.ACTION_APPLICATION_DETAILS_SETTINGS` para o pacote selecionado sem adicionar botão de desinstalação direta.
+
 ## [1.9.1] - 2026-11-26
 
 ### Adicionado e Corrigido
