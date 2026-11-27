@@ -167,7 +167,12 @@ fun LauncherApp(
                     spaces = spaces,
                     assignments = assignments,
                     onToggleAppInSpace = onToggleAppInSpace,
-                    onAppClick = onAppClick
+                    onAppClick = { app ->
+                        onAppClick(app)
+                        if (searchQuery.isNotEmpty()) {
+                            onSearchQueryChange("")
+                        }
+                    }
                 )
             }
         }

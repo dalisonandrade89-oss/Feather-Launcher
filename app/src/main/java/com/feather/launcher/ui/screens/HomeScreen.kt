@@ -33,6 +33,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -112,20 +114,14 @@ fun HomeScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            // FIX #8: engrenagem movida para a esquerda (navigationIcon).
-            // No lado direito ela ficava perto de onde o polegar apoia ao
-            // segurar o aparelho, gerando toques acidentais; à esquerda,
-            // mais longe do apoio natural da mão, isso é bem mais raro.
             TopAppBar(
                 title = {},
                 navigationIcon = {
-                    IconButton(onClick = { showAppearancePanel = !showAppearancePanel }) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = "Personalizar aparência",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SlidingSettingsHandle(
+                        isAppearanceOpen = showAppearancePanel,
+                        onOpenAppearance = { showAppearancePanel = true },
+                        onCloseAppearance = { showAppearancePanel = false }
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
@@ -209,6 +205,93 @@ fun HomeScreen(
         onRequestRename = { space -> spaceDialog = SpaceDialogState.Rename(space) },
         onRequestDelete = { space -> spaceDialog = SpaceDialogState.DeleteConfirm(space) }
     )
+}
+
+@Composable
+private fun SlidingSettingsHandle(
+    isAppearanceOpen: Boolean,
+    onOpenAppearance: () -> Unit,
+    onCloseAppearance: () -> Unit
+) {
+    var handleExpanded by remember { mutableStateOf(false) }
+
+    val pillShape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
+    val accent = MaterialTheme.colorScheme.primary
+    val containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f)
+
+    Row(
+        modifier = Modifier
+            .padding(vertical = 6.dp)
+            .clip(pillShape)
+            .background(containerColor)
+            .border(
+                width = 1.dp,
+                color = accent.copy(alpha = if (handleExpanded || isAppearanceOpen) 0.5f else 0.25f),
+                shape = pillShape
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (handleExpanded || isAppearanceOpen) {
+            IconButton(
+                onClick = {
+                    if (isAppearanceOpen) {
+                        onCloseAppearance()
+                        handleExpanded = false
+                    } else {
+                        onOpenAppearance()
+                    }
+                },
+                modifier = Modifier.size(38.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = "Personalizar aparência",
+                    tint = if (isAppearanceOpen) accent else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .width(24.dp)
+                    .height(38.dp)
+                    .clickable {
+                        onCloseAppearance()
+                        handleExpanded = false
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    contentDescription = "Recolher aba de configurações",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        } else {
+            // Pequena aba visível na borda esquerda; ao tocar, expande e revela a engrenagem
+            Row(
+                modifier = Modifier
+                    .height(34.dp)
+                    .clickable { handleExpanded = true }
+                    .padding(start = 4.dp, end = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(3.dp)
+                        .height(16.dp)
+                        .clip(CircleShape)
+                        .background(accent)
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "Mostrar configurações",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
 }
 
 // ---------- Diálogos de gerenciamento de Spaces ----------

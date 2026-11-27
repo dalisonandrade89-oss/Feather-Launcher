@@ -10,6 +10,13 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.9.1] - 2026-11-26
+
+### Adicionado e Corrigido
+- **Aba retrátil para configurações na Home:** substituído o ícone fixo de engrenagem por uma aba compacta na borda esquerda (`SlidingSettingsHandle`) que se expande ao toque para revelar o botão da engrenagem e o painel de cores/aparência.
+- **Limpeza automática da busca na Gaveta ao abrir app:** ao pesquisar um aplicativo na grade ou lista da gaveta e clicar para abri-lo, o campo de busca é limpo imediatamente para exibir todos os apps ao retornar.
+- **Publicação automática de Releases no GitHub:** ajustado `.github/workflows/build.yml` com `target_commitish`, `draft: false`, `make_latest: true` e anexação automática dos APKs de release e debug em todo `push` ou execução manual.
+
 ## [1.9.0] - 2026-11-26
 
 ### Adicionado
