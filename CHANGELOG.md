@@ -10,6 +10,11 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.9.3] - 2026-11-27
+
+### Adicionado
+- **Atalhos PWA com Brave, Vivaldi e Chrome:** adicionados `PwaShortcut` e `PwaPrefs` com faixa leve de atalhos na gaveta de apps, diálogo para cadastrar nome/URL/navegador (`Brave`, `Vivaldi` ou `Chrome`), filtragem na busca e abertura direta no navegador escolhido sem embutir `WebView` no launcher.
+
 ## [1.9.2] - 2026-11-27
 
 ### Adicionado

@@ -24,6 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.feather.launcher.data.AppDrawerViewMode
 import com.feather.launcher.data.AppInfo
+import com.feather.launcher.pwa.PwaBrowser
+import com.feather.launcher.pwa.PwaShortcut
 import com.feather.launcher.data.NotificationScale
 import com.feather.launcher.data.SpaceDef
 import com.feather.launcher.data.ThemeMode
@@ -51,6 +53,10 @@ private const val PAGE_COUNT = 3
 @Composable
 fun LauncherApp(
     filteredApps: PersistentList<AppInfo>,
+    pwaShortcuts: PersistentList<PwaShortcut>,
+    onAddPwaShortcut: (String, String, PwaBrowser) -> Unit,
+    onRemovePwaShortcut: (String) -> Unit,
+    onLaunchPwaShortcut: (PwaShortcut) -> Unit,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     drawerViewMode: AppDrawerViewMode,
@@ -161,6 +167,15 @@ fun LauncherApp(
 
                 PAGE_DRAWER -> AppDrawerScreen(
                     apps = filteredApps,
+                    pwaShortcuts = pwaShortcuts,
+                    onAddPwaShortcut = onAddPwaShortcut,
+                    onRemovePwaShortcut = onRemovePwaShortcut,
+                    onLaunchPwaShortcut = { pwa ->
+                        onLaunchPwaShortcut(pwa)
+                        if (searchQuery.isNotEmpty()) {
+                            onSearchQueryChange("")
+                        }
+                    },
                     searchQuery = searchQuery,
                     onSearchQueryChange = onSearchQueryChange,
                     viewMode = drawerViewMode,

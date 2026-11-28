@@ -3,6 +3,8 @@ package com.feather.launcher.ui.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +16,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -24,10 +29,15 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,6 +64,9 @@ import com.feather.launcher.R
 import com.feather.launcher.data.AppDrawerViewMode
 import com.feather.launcher.data.AppInfo
 import com.feather.launcher.data.SpaceDef
+import com.feather.launcher.data.toSearchNormalized
+import com.feather.launcher.pwa.PwaBrowser
+import com.feather.launcher.pwa.PwaShortcut
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.PersistentSet
@@ -77,6 +90,10 @@ import kotlinx.collections.immutable.PersistentSet
 @Composable
 fun AppDrawerScreen(
     apps: PersistentList<AppInfo>,
+    pwaShortcuts: PersistentList<PwaShortcut>,
+    onAddPwaShortcut: (String, String, PwaBrowser) -> Unit,
+    onRemovePwaShortcut: (String) -> Unit,
+    onLaunchPwaShortcut: (PwaShortcut) -> Unit,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     viewMode: AppDrawerViewMode,
@@ -89,6 +106,22 @@ fun AppDrawerScreen(
     modifier: Modifier = Modifier
 ) {
     var appForSpaceDialog by remember { mutableStateOf<AppInfo?>(null) }
+    var showAddPwaDialog by remember { mutableStateOf(false) }
+    var pwaForDeleteDialog by remember { mutableStateOf<PwaShortcut?>(null) }
+
+    val visiblePwas = remember(pwaShortcuts, searchQuery) {
+        val trimmed = searchQuery.trim()
+        if (trimmed.isBlank()) {
+            pwaShortcuts
+        } else {
+            val norm = trimmed.toSearchNormalized()
+            pwaShortcuts.filter {
+                it.searchableName.contains(norm) ||
+                    it.url.lowercase().contains(trimmed.lowercase()) ||
+                    it.browser.label.lowercase().contains(trimmed.lowercase())
+            }
+        }
+    }
 
     Column(
         modifier = modifier
@@ -105,7 +138,17 @@ fun AppDrawerScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         )
 
-        if (apps.isEmpty()) {
+        PwaShelf(
+            shortcuts = visiblePwas,
+            onAddClick = { showAddPwaDialog = true },
+            onPwaClick = onLaunchPwaShortcut,
+            onPwaLongClick = { pwaForDeleteDialog = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+        )
+
+        if (apps.isEmpty() && visiblePwas.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     text = "Nenhum app encontrado",
@@ -128,6 +171,35 @@ fun AppDrawerScreen(
         }
     }
 
+    if (showAddPwaDialog) {
+        AddPwaShortcutDialog(
+            onConfirm = { name, url, browser ->
+                onAddPwaShortcut(name, url, browser)
+                showAddPwaDialog = false
+            },
+            onDismiss = { showAddPwaDialog = false }
+        )
+    }
+
+    pwaForDeleteDialog?.let { pwa ->
+        AlertDialog(
+            onDismissRequest = { pwaForDeleteDialog = null },
+            title = { Text("Remover atalho "${pwa.name}"?") },
+            text = { Text("Navegador: ${pwa.browser.label} · ${pwa.url}") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onRemovePwaShortcut(pwa.id)
+                        pwaForDeleteDialog = null
+                    }
+                ) { Text("Remover") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pwaForDeleteDialog = null }) { Text("Cancelar") }
+            }
+        )
+    }
+
     appForSpaceDialog?.let { app ->
         SpaceAssignmentDialog(
             app = app,
@@ -141,6 +213,171 @@ fun AppDrawerScreen(
             onDismiss = { appForSpaceDialog = null }
         )
     }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PwaShelf(
+    shortcuts: List<PwaShortcut>,
+    onAddClick: () -> Unit,
+    onPwaClick: (PwaShortcut) -> Unit,
+    onPwaLongClick: (PwaShortcut) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "PWAs (Brave · Vivaldi · Chrome)",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+                    .clickable(onClick = onAddClick)
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Add PWA",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
+        if (shortcuts.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(6.dp))
+            androidx.compose.foundation.lazy.LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                androidx.compose.foundation.lazy.items(items = shortcuts, key = { it.id }) { pwa ->
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .combinedClickable(
+                                onClick = { onPwaClick(pwa) },
+                                onLongClick = { onPwaLongClick(pwa) }
+                            )
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Language,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Column {
+                            Text(
+                                text = pwa.name,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = pwa.browser.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddPwaShortcutDialog(
+    onConfirm: (name: String, url: String, browser: PwaBrowser) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf("") }
+    var selectedBrowser by remember { mutableStateOf(PwaBrowser.BRAVE) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Novo atalho PWA") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nome do app") },
+                    placeholder = { Text("Ex.: YouTube Music") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text("URL do PWA") },
+                    placeholder = { Text("music.youtube.com") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "Navegador",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    PwaBrowser.entries.forEach { browser ->
+                        FilterChip(
+                            selected = browser == selectedBrowser,
+                            onClick = { selectedBrowser = browser },
+                            label = { Text(browser.label) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (name.isNotBlank() && url.isNotBlank()) {
+                        onConfirm(name, url, selectedBrowser)
+                    }
+                }
+            ) { Text("Salvar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
 }
 
 // ---------- Visualização em lista ----------

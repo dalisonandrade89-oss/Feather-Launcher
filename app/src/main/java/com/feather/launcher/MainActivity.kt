@@ -25,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.feather.launcher.data.AppInfo
+import com.feather.launcher.pwa.PwaBrowser
+import com.feather.launcher.pwa.PwaShortcut
 import com.feather.launcher.ui.LauncherApp
 import com.feather.launcher.update.AppUpdateDialog
 import com.feather.launcher.update.AppUpdateManager
@@ -110,6 +112,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val filteredApps by viewModel.filteredApps.collectAsStateWithLifecycle()
+                    val pwaShortcuts by viewModel.pwaShortcuts.collectAsStateWithLifecycle()
                     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
                     val drawerViewMode by viewModel.drawerViewMode.collectAsStateWithLifecycle()
                     val spaces by viewModel.spaces.collectAsStateWithLifecycle()
@@ -130,6 +133,10 @@ class MainActivity : ComponentActivity() {
 
                     LauncherApp(
                         filteredApps = filteredApps,
+                        pwaShortcuts = pwaShortcuts,
+                        onAddPwaShortcut = viewModel::addPwaShortcut,
+                        onRemovePwaShortcut = viewModel::removePwaShortcut,
+                        onLaunchPwaShortcut = ::launchPwaShortcut,
                         searchQuery = searchQuery,
                         onSearchQueryChange = viewModel::onSearchQueryChange,
                         drawerViewMode = drawerViewMode,
@@ -342,6 +349,42 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             Log.w(TAG, "Não foi possível abrir informações de ${app.packageName}", e)
             showToast("Não foi possível abrir as informações de ${app.label}.")
+        }
+    }
+
+    // ---------- PWAs ----------
+
+    private fun launchPwaShortcut(shortcut: PwaShortcut) {
+        val uri = Uri.parse(shortcut.url)
+        val targets = buildList {
+            add(shortcut.browser.packageName)
+            for (fallback in PwaBrowser.entries) {
+                if (fallback.packageName !in this) add(fallback.packageName)
+            }
+        }
+
+        for (pkg in targets) {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                    setPackage(pkg)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                if (intent.resolveActivity(packageManager) != null) {
+                    startActivity(intent)
+                    return
+                }
+            } catch (_: Exception) {
+            }
+        }
+
+        try {
+            val fallbackIntent = Intent(Intent.ACTION_VIEW, uri).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(fallbackIntent)
+        } catch (e: Exception) {
+            Log.w(TAG, "Não foi possível abrir PWA ${shortcut.url}", e)
+            showToast("Não foi possível abrir ${shortcut.name}.")
         }
     }
 

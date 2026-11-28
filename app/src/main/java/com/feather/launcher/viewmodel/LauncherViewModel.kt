@@ -10,6 +10,9 @@ import com.feather.launcher.data.AppDrawerViewMode
 import com.feather.launcher.data.AppInfo
 import com.feather.launcher.data.NotificationScale
 import com.feather.launcher.data.AppPrefs
+import com.feather.launcher.pwa.PwaBrowser
+import com.feather.launcher.pwa.PwaPrefs
+import com.feather.launcher.pwa.PwaShortcut
 import com.feather.launcher.data.AppRepository
 import com.feather.launcher.data.SpaceDef
 import com.feather.launcher.data.ThemeMode
@@ -61,6 +64,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val appRepository = AppRepository(application)
     private val widgetPrefs = WidgetPrefs(application)
     private val appPrefs = AppPrefs(application)
+    private val pwaPrefs = PwaPrefs(application)
     private val updateManager = AppUpdateManager(application)
 
     // ---------- Apps ----------
@@ -70,6 +74,19 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private val _isLoadingApps = MutableStateFlow(true)
     val isLoadingApps: StateFlow<Boolean> = _isLoadingApps
+
+    // ---------- Atalhos PWA (Brave, Vivaldi, Chrome) ----------
+
+    private val _pwaShortcuts = MutableStateFlow(pwaPrefs.getShortcuts().toPersistentList())
+    val pwaShortcuts: StateFlow<PersistentList<PwaShortcut>> = _pwaShortcuts
+
+    fun addPwaShortcut(name: String, url: String, browser: PwaBrowser) {
+        _pwaShortcuts.value = pwaPrefs.addShortcut(name, url, browser).toPersistentList()
+    }
+
+    fun removePwaShortcut(shortcutId: String) {
+        _pwaShortcuts.value = pwaPrefs.removeShortcut(shortcutId).toPersistentList()
+    }
 
     // ---------- Gaveta de apps (tela da direita) ----------
 
