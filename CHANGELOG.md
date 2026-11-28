@@ -10,6 +10,11 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.9.7] - 2026-11-27
+
+### Alterado
+- **Fluxo PWA focado em Brave e Vivaldi:** priorizados `Brave` e `Vivaldi` como navegadores principais, removendo fallback forçado para o Chrome e adicionando ação direta para abrir a URL no navegador escolhido com orientação para instalar pelo menu do navegador ("Instalar página como app") sem barra de URL ou botões do navegador na experiência instalada.
+
 ## [1.9.6] - 2026-11-27
 
 ### Corrigido

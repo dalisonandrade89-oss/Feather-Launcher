@@ -93,6 +93,7 @@ fun AppDrawerScreen(
     apps: PersistentList<AppInfo>,
     pwaShortcuts: PersistentList<PwaShortcut>,
     onAddPwaShortcut: (String, String, PwaBrowser) -> Unit,
+    onOpenBrowserToInstallPwa: (String, PwaBrowser) -> Unit,
     onRemovePwaShortcut: (String) -> Unit,
     onLaunchPwaShortcut: (PwaShortcut) -> Unit,
     searchQuery: String,
@@ -178,6 +179,13 @@ fun AppDrawerScreen(
                 onAddPwaShortcut(name, url, browser)
                 showAddPwaDialog = false
             },
+            onOpenInBrowserToInstall = { rawUrl, browser ->
+                val normalized = com.feather.launcher.pwa.PwaPrefs.normalizeUrl(rawUrl)
+                if (normalized.isNotEmpty()) {
+                    onOpenBrowserToInstallPwa(normalized, browser)
+                    showAddPwaDialog = false
+                }
+            },
             onDismiss = { showAddPwaDialog = false }
         )
     }
@@ -232,7 +240,7 @@ private fun PwaShelf(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "PWAs (Brave · Vivaldi · Chrome)",
+                text = "PWAs (Brave · Vivaldi)",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -313,6 +321,7 @@ private fun PwaShelf(
 @Composable
 private fun AddPwaShortcutDialog(
     onConfirm: (name: String, url: String, browser: PwaBrowser) -> Unit,
+    onOpenInBrowserToInstall: (rawUrl: String, browser: PwaBrowser) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
@@ -321,9 +330,15 @@ private fun AddPwaShortcutDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Novo atalho PWA") },
+        title = { Text("PWA via Brave ou Vivaldi") },
         text = {
             Column {
+                Text(
+                    text = "Para rodar como app real (sem barra de URL ou botões do navegador), abra a página no Brave ou Vivaldi e use "Instalar página como app" no menu do navegador.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -336,7 +351,7 @@ private fun AddPwaShortcutDialog(
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("URL do PWA") },
+                    label = { Text("URL do site / PWA") },
                     placeholder = { Text("music.youtube.com") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -352,7 +367,7 @@ private fun AddPwaShortcutDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    PwaBrowser.entries.forEach { browser ->
+                    PwaBrowser.preferredBrowsers.forEach { browser ->
                         FilterChip(
                             selected = browser == selectedBrowser,
                             onClick = { selectedBrowser = browser },
@@ -364,6 +379,15 @@ private fun AddPwaShortcutDialog(
                         )
                     }
                 }
+                if (url.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(
+                        onClick = { onOpenInBrowserToInstall(url, selectedBrowser) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Abrir no ${selectedBrowser.label} para instalar como app")
+                    }
+                }
             }
         },
         confirmButton = {
@@ -373,7 +397,7 @@ private fun AddPwaShortcutDialog(
                         onConfirm(name, url, selectedBrowser)
                     }
                 }
-            ) { Text("Salvar") }
+            ) { Text("Salvar atalho") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancelar") }

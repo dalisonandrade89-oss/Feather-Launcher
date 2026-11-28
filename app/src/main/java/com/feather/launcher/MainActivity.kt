@@ -135,6 +135,7 @@ class MainActivity : ComponentActivity() {
                         filteredApps = filteredApps,
                         pwaShortcuts = pwaShortcuts,
                         onAddPwaShortcut = viewModel::addPwaShortcut,
+                        onOpenBrowserToInstallPwa = { url, browser -> openUrlInBrowser(url, browser, showInstallGuide = true) },
                         onRemovePwaShortcut = viewModel::removePwaShortcut,
                         onLaunchPwaShortcut = ::launchPwaShortcut,
                         searchQuery = searchQuery,
@@ -352,25 +353,28 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ---------- PWAs ----------
+    // ---------- PWAs (instalação via menu do navegador + abertura sem barra) ----------
 
-    private fun launchPwaShortcut(shortcut: PwaShortcut) {
-        val uri = Uri.parse(shortcut.url)
+    private fun openUrlInBrowser(url: String, preferredBrowser: PwaBrowser, showInstallGuide: Boolean = false) {
+        val uri = Uri.parse(url)
         val targets = buildList {
-            add(shortcut.browser.packageName)
-            for (fallback in PwaBrowser.entries) {
-                if (fallback.packageName !in this) add(fallback.packageName)
+            add(preferredBrowser)
+            for (b in PwaBrowser.preferredBrowsers) {
+                if (b !in this) add(b)
             }
         }
 
-        for (pkg in targets) {
+        for (browser in targets) {
             try {
                 val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-                    setPackage(pkg)
+                    setPackage(browser.packageName)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 if (intent.resolveActivity(packageManager) != null) {
                     startActivity(intent)
+                    if (showInstallGuide) {
+                        showToast(browser.installHint)
+                    }
                     return
                 }
             } catch (_: Exception) {
@@ -382,10 +386,21 @@ class MainActivity : ComponentActivity() {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             startActivity(fallbackIntent)
+            if (showInstallGuide) {
+                showToast("Use o menu do navegador em "Instalar página como app".")
+            }
         } catch (e: Exception) {
-            Log.w(TAG, "Não foi possível abrir PWA ${shortcut.url}", e)
-            showToast("Não foi possível abrir ${shortcut.name}.")
+            Log.w(TAG, "Não foi possível abrir $url", e)
+            showToast("Não foi possível abrir o navegador.")
         }
+    }
+
+    private fun launchPwaShortcut(shortcut: PwaShortcut) {
+        openUrlInBrowser(
+            url = shortcut.url,
+            preferredBrowser = shortcut.browser,
+            showInstallGuide = false
+        )
     }
 
     // ---------- Notificações ----------

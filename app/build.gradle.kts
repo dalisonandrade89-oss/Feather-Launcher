@@ -14,8 +14,8 @@ plugins {
 // (BuildConfig.VERSION_NAME) usam estas mesmas variáveis, então nunca
 // ficam dessincronizados.
 // ---------------------------------------------------------------------
-val appVersionCode = 22
-val appVersionName = "1.9.6"
+val appVersionCode = 23
+val appVersionName = "1.9.7"
 
 android {
     namespace = "com.feather.launcher"

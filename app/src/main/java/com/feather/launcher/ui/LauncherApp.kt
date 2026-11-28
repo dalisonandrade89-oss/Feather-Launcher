@@ -55,6 +55,7 @@ fun LauncherApp(
     filteredApps: PersistentList<AppInfo>,
     pwaShortcuts: PersistentList<PwaShortcut>,
     onAddPwaShortcut: (String, String, PwaBrowser) -> Unit,
+    onOpenBrowserToInstallPwa: (String, PwaBrowser) -> Unit,
     onRemovePwaShortcut: (String) -> Unit,
     onLaunchPwaShortcut: (PwaShortcut) -> Unit,
     searchQuery: String,
@@ -169,6 +170,7 @@ fun LauncherApp(
                     apps = filteredApps,
                     pwaShortcuts = pwaShortcuts,
                     onAddPwaShortcut = onAddPwaShortcut,
+                    onOpenBrowserToInstallPwa = onOpenBrowserToInstallPwa,
                     onRemovePwaShortcut = onRemovePwaShortcut,
                     onLaunchPwaShortcut = { pwa ->
                         onLaunchPwaShortcut(pwa)
