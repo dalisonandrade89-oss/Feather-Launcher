@@ -387,7 +387,7 @@ class MainActivity : ComponentActivity() {
             }
             startActivity(fallbackIntent)
             if (showInstallGuide) {
-                showToast("Use o menu do navegador em "Instalar página como app".")
+                showToast("Use o menu do navegador em \"Instalar página como app\".")
             }
         } catch (e: Exception) {
             Log.w(TAG, "Não foi possível abrir $url", e)

@@ -334,7 +334,7 @@ private fun AddPwaShortcutDialog(
         text = {
             Column {
                 Text(
-                    text = "Para rodar como app real (sem barra de URL ou botões do navegador), abra a página no Brave ou Vivaldi e use "Instalar página como app" no menu do navegador.",
+                    text = "Para rodar como app real (sem barra de URL ou botões do navegador), abra a página no Brave ou Vivaldi e use \"Instalar página como app\" no menu do navegador.",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -10,6 +10,11 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.9.8] - 2026-11-27
+
+### Corrigido
+- **Escape de aspas em literais Kotlin (`MainActivity.kt`, `PwaShortcut.kt`, `AppDrawerScreen.kt`):** corrigidas aspas internas não escapadas nas mensagens de orientação de instalação de PWA (`"Instalar página como app"`, `"Adicionar à tela inicial"`, `"Instalar aplicativo"`).
+
 ## [1.9.7] - 2026-11-27
 
 ### Alterado

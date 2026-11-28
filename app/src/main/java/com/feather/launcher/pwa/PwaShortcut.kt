@@ -10,19 +10,19 @@ enum class PwaBrowser(
         id = "brave",
         label = "Brave",
         packageName = "com.brave.browser",
-        installHint = "No Brave: menu (⋮) → "Instalar página como app" ou "Adicionar à tela inicial"."
+        installHint = "No Brave: menu (⋮) → \"Instalar página como app\" ou \"Adicionar à tela inicial\"."
     ),
     VIVALDI(
         id = "vivaldi",
         label = "Vivaldi",
         packageName = "com.vivaldi.browser",
-        installHint = "No Vivaldi: menu → "Instalar página como app" ou "Adicionar à tela inicial"."
+        installHint = "No Vivaldi: menu → \"Instalar página como app\" ou \"Adicionar à tela inicial\"."
     ),
     CHROME(
         id = "chrome",
         label = "Chrome",
         packageName = "com.android.chrome",
-        installHint = "No Chrome: menu (⋮) → "Instalar aplicativo" ou "Adicionar à tela inicial"."
+        installHint = "No Chrome: menu (⋮) → \"Instalar aplicativo\" ou \"Adicionar à tela inicial\"."
     );
 
     companion object {
