@@ -10,6 +10,11 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.9.9] - 2026-11-28
+
+### Alterado
+- **Pipeline de assinatura e publicação automática de release (`.github/workflows/build.yml`):** estruturado em jobs separados (`build` e `release`), com `permissions: contents: write`, `concurrency`, decodificação segura de `RELEASE_KEYSTORE_BASE64` em `$RUNNER_TEMP`, suporte a tags `v*` e publicação automática com `softprops/action-gh-release@v2` (`make_latest: true`).
+
 ## [1.9.8] - 2026-11-27
 
 ### Corrigido
