@@ -10,6 +10,12 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.9.6] - 2026-11-27
+
+### Corrigido
+- **Erro de compilação em `AppDrawerScreen.kt`:** substituído `Icons.Filled.Public` por `Icons.Filled.Search` (ícone garantido em `material-icons-core`), eliminando `Unresolved reference: Public`.
+- **Workflow CI:** migrado `actions/setup-java@v4` para `actions/setup-java@v5` em `.github/workflows/build.yml`.
+
 ## [1.9.5] - 2026-11-27
 
 ### Corrigido
