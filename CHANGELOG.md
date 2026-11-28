@@ -10,6 +10,11 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.9.5] - 2026-11-27
+
+### Corrigido
+- **Imports em `AppDrawerScreen.kt`:** restaurados `androidx.compose.foundation.lazy.LazyRow` e `androidx.compose.foundation.lazy.items` e removida referência residual a `Icons.Filled.Language`.
+
 ## [1.9.4] - 2026-11-27
 
 ### Corrigido
