@@ -10,6 +10,11 @@ e o projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/)
 - **MINOR** — funcionalidade nova, compatível com o que já existia
 - **PATCH** — correção de bug ou de performance, sem funcionalidade nova
 
+## [1.9.4] - 2026-11-27
+
+### Corrigido
+- **Erro de compilação em `AppDrawerScreen.kt`:** corrigido o escape das aspas em `"Remover atalho "${pwa.name}"?"`, adicionados os imports de `clip`, `LazyRow` e `items`, e substituído `Icons.Filled.Language` por `Icons.Filled.Public` (presente em `material-icons-core`).
+
 ## [1.9.3] - 2026-11-27
 
 ### Adicionado

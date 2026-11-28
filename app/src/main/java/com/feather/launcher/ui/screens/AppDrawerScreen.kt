@@ -21,7 +21,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import LazyRow
+import items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
@@ -52,6 +54,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
@@ -184,7 +187,7 @@ fun AppDrawerScreen(
     pwaForDeleteDialog?.let { pwa ->
         AlertDialog(
             onDismissRequest = { pwaForDeleteDialog = null },
-            title = { Text("Remover atalho "${pwa.name}"?") },
+            title = { Text("Remover atalho \"${pwa.name}\"?") },
             text = { Text("Navegador: ${pwa.browser.label} · ${pwa.url}") },
             confirmButton = {
                 TextButton(
@@ -260,11 +263,11 @@ private fun PwaShelf(
 
         if (shortcuts.isNotEmpty()) {
             Spacer(modifier = Modifier.height(6.dp))
-            androidx.compose.foundation.lazy.LazyRow(
+            LazyRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                androidx.compose.foundation.lazy.items(items = shortcuts, key = { it.id }) { pwa ->
+                items(items = shortcuts, key = { it.id }) { pwa ->
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
@@ -282,7 +285,7 @@ private fun PwaShelf(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Language,
+                            imageVector = Icons.Filled.Public,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
